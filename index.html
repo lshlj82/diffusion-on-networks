@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diffusion on networks: an interactive demo</title>
+<meta name="description" content="Interactive demo of spreading and diffusion on networks with the adjacency and Laplacian matrices. Made by Claude Opus 5.5, based on Sang Hoon Lee's lecture slides.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F7FA; --surface:#FFFFFF; --ink:#1D2433; --muted:#5B6476; --line:#D5DAE3;
+  --heat:#E5675A; --cool:#2F6FB5; --mode:#8A4FD6; --node:#A9474F; --node-ink:#FBE3E1;
+  --soft:#EEF1F6;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#141922; --surface:#1C2330; --ink:#E7EBF2; --muted:#9AA4B5; --line:#334055;
+    --heat:#F07A6C; --cool:#6FA3E6; --mode:#B48AF0; --node:#C2575F; --node-ink:#2A1416;
+    --soft:#232B3A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141922; --surface:#1C2330; --ink:#E7EBF2; --muted:#9AA4B5; --line:#334055;
+  --heat:#F07A6C; --cool:#6FA3E6; --mode:#B48AF0; --node:#C2575F; --node-ink:#2A1416;
+  --soft:#232B3A; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 70px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;font-size:17px;line-height:1.6;
+  font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:Kalam,"Comic Sans MS","Segoe Print",cursive;font-weight:700;line-height:1.15;margin:0}
+h1{font-size:clamp(1.6rem,4vw,2.3rem)}
+h2{font-size:clamp(1.4rem,3.2vw,1.9rem);display:flex;gap:.6rem;align-items:baseline}
+h2 .num{font-size:.8em;color:var(--muted);font-weight:400}
+h3{font-size:1.2rem;margin:1.4rem 0 .4rem}
+p{margin:.4rem 0 .9rem;max-width:68ch}
+.muted{color:var(--muted)}
+.m{font-style:italic}
+b.v{font-weight:600}
+.small{font-size:.92rem}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-inner{max-width:1120px;margin:0 auto;padding:.7rem 1.2rem;display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;align-items:center;justify-content:space-between}
+.picker{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.picker label{color:var(--muted);font-size:.95rem}
+select,button,input[type=number]{font:inherit;font-size:.95rem;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;padding:.35rem .75rem}
+select,button{cursor:pointer}
+button:hover,select:hover{border-color:var(--muted)}
+button:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--mode);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:var(--surface)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+main{max-width:1120px;margin:0 auto;padding:1.4rem 1.2rem 3rem}
+.intro{padding:1rem 0 1.6rem;max-width:72ch}
+.intro p{font-size:1.08rem}
+section{padding:2rem 0 2.4rem;border-top:1px solid var(--line)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:1.6rem;margin-top:1rem;align-items:start}
+@media (max-width:860px){.split{grid-template-columns:minmax(0,1fr)}}
+.sticky-col{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px)}
+@media (max-width:860px){.sticky-col{position:static}}
+.graphbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.4rem}
+.graphbox svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.hint{font-size:.88rem;color:var(--muted);margin:.3rem .6rem .4rem}
+.controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.8rem 0}
+.controls label{font-size:.95rem;color:var(--muted);display:flex;gap:.4rem;align-items:center}
+input[type=range]{accent-color:var(--heat);width:120px}
+input[type=checkbox]{accent-color:var(--mode);width:1rem;height:1rem;margin:0}
+input[type=number]{width:5.2rem;padding:.25rem .45rem}
+.readout{display:flex;flex-wrap:wrap;gap:.3rem 1.4rem;font-size:.98rem;margin:.3rem 0 .6rem}
+.readout b{font-weight:600}
+.note{font-size:.95rem;background:var(--soft);border-radius:10px;padding:.7rem .9rem;max-width:68ch}
+.warn{color:var(--heat);font-weight:600}
+.custom{display:flex;flex-wrap:wrap;gap:.4rem .9rem;background:var(--soft);border-radius:10px;padding:.6rem .8rem;margin-bottom:.6rem}
+.custom label{font-size:.92rem;display:flex;gap:.35rem;align-items:center}
+
+/* matrices */
+.eq{display:flex;align-items:center;gap:.5rem;overflow-x:auto;padding:.4rem 0 .6rem;font-size:1.05rem}
+.sym{white-space:nowrap}
+table.mat{border-collapse:collapse;font-size:.92rem;flex:none;border-left:1.5px solid var(--ink);border-right:1.5px solid var(--ink);border-radius:3px}
+table.mat td{padding:.05rem .45rem;text-align:right;min-width:1.6em}
+table.mat td.z{color:var(--muted)}
+table.mat tr.hl td{background:var(--soft)}
+table.mat td.diag{color:var(--cool);font-weight:600}
+table.mat td.off{color:var(--heat)}
+
+/* equation system */
+.sysbox{overflow-x:auto;margin:.6rem 0 .2rem}
+.sys{display:flex;align-items:stretch;gap:.5rem;width:max-content}
+.brace{width:12px;border:2px solid var(--ink);border-right:0;border-radius:12px 0 0 12px;flex:none}
+table.eqs{border-collapse:separate;border-spacing:.35rem .25rem;font-size:1.05rem}
+table.eqs td{white-space:nowrap;vertical-align:middle}
+table.eqs tr{cursor:pointer}
+table.eqs tr.hl td.lhs{background:var(--soft);border-radius:6px}
+table.eqs td.val{color:var(--muted);font-size:.95rem;padding-left:.6rem}
+.box{border:2px solid;border-radius:8px;padding:.02rem .45rem;display:inline-block}
+.box.b{border-color:var(--cool)} .box.r{border-color:var(--heat)}
+.boxkey{display:flex;flex-wrap:wrap;gap:.3rem 1.2rem;font-size:.9rem;margin:.2rem 0 .6rem}
+.boxkey .b{color:var(--cool)} .boxkey .r{color:var(--heat)}
+.boxkey i{display:inline-block;width:14px;height:12px;border:2px solid;border-radius:4px;vertical-align:-1px;margin-right:.35rem}
+
+/* nodes */
+.edge{stroke:var(--ink);stroke-width:2.2;stroke-linecap:round}
+.halo{fill:var(--heat);opacity:.6;transition:r .25s}
+.anim .halo{transition:none}
+.halo.neg{fill:var(--cool)}
+.core{fill:var(--node);stroke:var(--surface);stroke-width:1.5}
+.nlabel{fill:var(--node-ink);font:600 13px "Source Serif 4",Georgia,serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.nval{fill:var(--ink);font:13px "Source Serif 4",Georgia,serif;text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--surface);stroke-width:3px}
+.nodeg{cursor:pointer}
+.nodeg:hover .core{stroke:var(--ink)}
+.thumb .edge{stroke-width:7}
+.thumb .core{stroke-width:0}
+.thumb .halo{transition:none}
+
+canvas{width:100%;display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+#plot2{height:220px} #plot3{height:200px}
+.legend{display:flex;flex-wrap:wrap;gap:.2rem .9rem;font-size:.88rem;color:var(--muted);margin:.4rem .2rem}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:.3rem}
+
+/* modes */
+.modes{display:flex;flex-direction:column;gap:.4rem}
+.mode-row{display:grid;grid-template-columns:1.2rem 92px minmax(0,1fr);gap:.4rem .8rem;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.45rem .7rem;border-left:5px solid var(--mc)}
+.mode-row.off{opacity:.5}
+.mode-row svg{width:92px;height:auto;display:block}
+.mode-top{display:flex;justify-content:space-between;gap:.6rem;flex-wrap:wrap;font-size:.95rem}
+.mode-top .now{color:var(--muted)}
+.mode-ctl{display:flex;align-items:center;gap:.5rem;font-size:.9rem;color:var(--muted)}
+.mode-ctl input[type=range]{flex:1;min-width:90px;accent-color:var(--mc)}
+.mode-ctl output{min-width:3.4rem;text-align:right;color:var(--ink)}
+.bar{position:relative;height:10px;margin-top:.25rem}
+.bar::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;border-left:1px solid var(--line)}
+.bar i{position:absolute;top:0;height:100%;border-radius:3px;background:var(--mc)}
+.formula{font-size:1rem;overflow-x:auto;white-space:nowrap;padding:.4rem 0}
+.formula .t{border-bottom:3px solid var(--mc);padding:0 .1rem}
+
+footer{max-width:1120px;margin:0 auto;padding:1.6rem 1.2rem 3rem;color:var(--muted);font-size:.95rem;border-top:1px solid var(--line)}
+footer p{max-width:72ch}
+@media (prefers-reduced-motion:reduce){.halo{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <h1>diffusion on networks</h1>
+    <div class="picker">
+      <label for="graphSel">Network</label>
+      <select id="graphSel"></select>
+      <button id="newRandom" hidden>New random graph</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <p>Some quantity sits on the nodes of a network and moves along its edges. The same network appears in all three parts below; pick a different one at the top and everything rebuilds. The circle around each node shows how much of the quantity it holds: red for positive amounts, blue for negative ones.</p>
+  </div>
+
+  <!-- ===== 1 ===== -->
+  <section id="s1">
+    <h2><span class="num">1</span> Spreading with the adjacency matrix</h2>
+    <p>Multiplying by <b class="v">A</b> sends each node's whole amount to every neighbor at once: <span class="m">v</span><sub>n+1</sub> = <b class="v">A</b><span class="m">v</span><sub>n</sub>, so <b class="v">A</b><sup>n</sup> is <span class="m">n</span>-step spreading. Nothing stops the total from growing.</p>
+    <div class="split">
+      <div class="graphbox">
+        <svg id="g1" viewBox="0 0 400 280" role="img" aria-label="Network for adjacency spreading"></svg>
+        <p class="hint">Click a node to start with all of the quantity on it.</p>
+      </div>
+      <div>
+        <div class="eq" id="eq1"></div>
+        <div class="controls">
+          <button class="primary" id="step1">Apply A once</button>
+          <button id="reset1">Reset</button>
+          <label><input type="checkbox" id="norm1"> Rescale so the total stays 1</label>
+        </div>
+        <div class="readout" id="read1"></div>
+        <p class="note" id="note1"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 2 ===== -->
+  <section id="s2">
+    <h2><span class="num">2</span> Diffusion with the Laplacian</h2>
+    <p>With <b class="v">L</b> = <b class="v">D</b> − <b class="v">A</b> (degrees on the diagonal), each node loses in proportion to its degree and gains from its neighbors. Diffusion runs continuously in time: d<span class="m">v</span>/d<span class="m">t</span> = −<span class="m">c</span><b class="v">L</b><span class="m">v</span>, where <span class="m">c</span> sets the speed.</p>
+    <div class="split">
+      <div class="sticky-col">
+        <div class="graphbox">
+          <svg id="g2" viewBox="0 0 400 280" role="img" aria-label="Network for Laplacian diffusion"></svg>
+          <p class="hint">Click a node to drop one more unit on it and highlight its equation.</p>
+        </div>
+      </div>
+      <div>
+        <div class="controls">
+          <label>Start with
+            <select id="ic">
+              <option value="one">Everything on one node</option>
+              <option value="uniform">The same amount on every node</option>
+              <option value="random">Random amounts</option>
+              <option value="ripple">Uniform plus the slowest ripple</option>
+              <option value="custom">Values I type in</option>
+            </select>
+          </label>
+          <label id="icNodeWrap">node <select id="icNode"></select></label>
+          <button id="reroll" hidden>New random values</button>
+        </div>
+        <div class="custom" id="customBox" hidden></div>
+        <div class="controls">
+          <button class="primary" id="play2">Play</button>
+          <button id="reset2">Restart</button>
+          <label>Speed <span class="m">c</span> <input type="range" id="rate2" min="0.1" max="3" step="0.1" value="1"><span id="rateVal">1.0</span></label>
+        </div>
+        <div class="controls">
+          <span class="muted" style="font-size:.95rem">Sign</span>
+          <div class="seg" role="group" aria-label="Sign convention">
+            <button id="signNeg" aria-pressed="true">d<span class="m">v</span>/d<span class="m">t</span> = −<b>L</b><span class="m">v</span></button>
+            <button id="signPos" aria-pressed="false">d<span class="m">v</span>/d<span class="m">t</span> = +<b>L</b><span class="m">v</span></button>
+          </div>
+        </div>
+        <div class="readout" id="read2"></div>
+
+        <h3>Every node's equation</h3>
+        <p class="small muted" id="sysCap"></p>
+        <div class="sysbox"><div class="sys"><div class="brace"></div><table class="eqs" id="eqs"></table></div></div>
+        <div class="boxkey" id="boxkey"></div>
+        <div class="eq" id="eq2"></div>
+        <p class="note" id="note2"></p>
+      </div>
+    </div>
+    <div style="margin-top:1.2rem">
+      <canvas id="plot2" aria-label="Amount on each node over time"></canvas>
+      <div class="legend" id="legend2"></div>
+    </div>
+  </section>
+
+  <!-- ===== 3 ===== -->
+  <section id="s3">
+    <h2><span class="num">3</span> Eigenmodes: build a state and watch it settle</h2>
+    <p>Every state can be written as a mix of the eigenvectors of <b class="v">L</b> (<b class="v">L</b><span class="m">x</span><sub>i</sub> = λ<sub>i</sub><span class="m">x</span><sub>i</sub>). Under diffusion each ingredient fades on its own clock: <span class="m">v</span>(<span class="m">t</span>) = Σ<sub>i</sub> <span class="m">c</span><sub>i</sub> e<sup>−λ<sub>i</sub><span class="m">t</span></sup> <span class="m">x</span><sub>i</sub>. Mix your own starting state with the sliders, then drag or play time forward. Here <span class="m">c</span> = 1 and the sign is −<b>L</b>.</p>
+    <div class="split">
+      <div class="sticky-col">
+        <div class="graphbox">
+          <svg id="g3" viewBox="0 0 400 280" role="img" aria-label="State built from eigenmodes"></svg>
+          <p class="hint" id="cap3"></p>
+        </div>
+        <div class="controls">
+          <button class="primary" id="play3">Play</button>
+          <label style="flex:1">Time <input type="range" id="t3" min="0" max="1" step="0.001" value="0" style="flex:1;min-width:120px"><output id="t3v">0.00</output></label>
+        </div>
+        <div class="formula" id="formula"></div>
+        <canvas id="plot3" aria-label="Amount in each mode over time"></canvas>
+        <p class="hint">Each curve is <span class="m">c</span><sub>i</sub>e<sup>−λ<sub>i</sub><span class="m">t</span></sup>; the vertical line is the current time.</p>
+      </div>
+      <div>
+        <div class="controls">
+          <button id="fromS2">Use part 2's starting state</button>
+          <button id="mixRandom">Random mix</button>
+          <button id="onlySteady">Only the steady state</button>
+        </div>
+        <div class="modes" id="modes"></div>
+        <p class="note" id="note3" style="margin-top:.9rem"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p><b>On sign conventions.</b> The slides write d<span class="m">v</span>/d<span class="m">t</span> = <b>L</b><span class="m">v</span>. Because <b>L</b> has non-negative eigenvalues, that version makes every non-uniform pattern grow exponentially, which is the “growing solution” case λ &gt; 0 in the slides' general solution. Physical diffusion, where the quantity flows from high to low, is d<span class="m">v</span>/d<span class="m">t</span> = −<b>L</b><span class="m">v</span>. Both conserve the total, and both have <span class="m">v</span><sub>st</sub> as a steady state. Use the sign switch in part 2 to compare them.</p>
+  <p><b>Credits.</b> Made by Claude Opus 5.5, an AI model by Anthropic. The content follows Sang Hoon Lee's lecture slides on the adjacency matrix, the Laplacian matrix, and spreading dynamics.</p>
+</footer>
+
+<script>
+(function(){
+const SVGNS="http://www.w3.org/2000/svg";
+const SERIES=["#E5675A","#2F6FB5","#2E9E6B","#C88A12","#8A4FD6","#D0488F","#1F9AAE","#7C8B2E","#9A6A44","#5A6DD8"];
+const MODEC=["#7A8394","#8A4FD6","#2E9E6B","#C88A12","#1F9AAE","#D0488F","#5A6DD8","#7C8B2E","#9A6A44","#E5675A"];
+const SUB=s=>String(s).replace(/\d/g,d=>"₀₁₂₃₄₅₆₇₈₉"[d]);
+
+/* ---------- graph library ---------- */
+function circlePos(n,cx,cy,r,rot){const p=[];for(let i=0;i<n;i++){const a=(rot==null?-Math.PI/2:rot)+2*Math.PI*i/n;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}return p}
+function makeRandom(){
+  const n=9,pos=circlePos(n,200,140,105).map(([x,y])=>[x+(Math.random()-.5)*30,y+(Math.random()-.5)*24]);
+  let edges=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.random()<0.3)edges.push([i,j]);
+  const par=[...Array(n).keys()],f=x=>par[x]===x?x:(par[x]=f(par[x]));
+  edges.forEach(([a,b])=>par[f(a)]=f(b));
+  for(let i=1;i<n;i++)if(f(i)!==f(0)){const j=Math.floor(Math.random()*i);edges.push([j,i]);par[f(i)]=f(0)}
+  return {name:"Random (9 nodes)",pos,edges,start:0};
+}
+const GRAPHS={
+  tri:{name:"Slide example: 3 nodes",pos:[[90,95],[310,50],[200,225]],edges:[[0,2],[1,2]],start:2},
+  four:{name:"Slide example: 4 nodes",pos:[[85,70],[315,70],[135,220],[265,220]],edges:[[0,2],[0,3],[1,2],[1,3],[2,3]],start:2},
+  path:{name:"Path of 6",pos:[[40,160],[104,115],[168,160],[232,115],[296,160],[360,115]],edges:[[0,1],[1,2],[2,3],[3,4],[4,5]],start:0},
+  star:{name:"Star with 6 leaves",pos:[[200,140]].concat(circlePos(6,200,140,105)),edges:[[0,1],[0,2],[0,3],[0,4],[0,5],[0,6]],start:1},
+  cycle:{name:"Ring of 8",pos:circlePos(8,200,140,108),edges:[...Array(8).keys()].map(i=>[i,(i+1)%8]),start:0},
+  barbell:{name:"Two clusters joined by one edge",pos:[[50,80],[150,80],[50,200],[150,200],[250,80],[350,80],[250,200],[350,200]],
+    edges:[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3],[4,5],[4,6],[4,7],[5,6],[5,7],[6,7],[1,4]],start:2},
+  split:{name:"Two separate triangles",pos:[[60,200],[120,80],[180,200],[220,80],[280,200],[340,80]],edges:[[0,1],[1,2],[0,2],[3,4],[4,5],[3,5]],start:1},
+  random:makeRandom()
+};
+
+/* ---------- linear algebra ---------- */
+function eigSym(M){
+  const n=M.length,a=M.map(r=>r.slice()),V=M.map((r,i)=>r.map((_,j)=>i===j?1:0));
+  for(let sweep=0;sweep<100;sweep++){
+    let off=0;for(let p=0;p<n;p++)for(let q=p+1;q<n;q++)off+=a[p][q]*a[p][q];
+    if(off<1e-22)break;
+    for(let p=0;p<n;p++)for(let q=p+1;q<n;q++){
+      if(Math.abs(a[p][q])<1e-15)continue;
+      const th=(a[q][q]-a[p][p])/(2*a[p][q]);
+      const t=(th>=0?1:-1)/(Math.abs(th)+Math.sqrt(th*th+1));
+      const c=1/Math.sqrt(t*t+1),s=t*c;
+      for(let k=0;k<n;k++){const x=a[k][p],y=a[k][q];a[k][p]=c*x-s*y;a[k][q]=s*x+c*y}
+      for(let k=0;k<n;k++){const x=a[p][k],y=a[q][k];a[p][k]=c*x-s*y;a[q][k]=s*x+c*y}
+      for(let k=0;k<n;k++){const x=V[k][p],y=V[k][q];V[k][p]=c*x-s*y;V[k][q]=s*x+c*y}
+    }
+  }
+  const out=[...Array(n).keys()].map(i=>{
+    let val=a[i][i];if(Math.abs(val)<1e-9)val=0;
+    let vec=V.map(r=>r[i]),big=0;
+    vec.forEach((x,k)=>{if(Math.abs(x)>Math.abs(vec[big])+1e-9)big=k});
+    if(vec[big]<0)vec=vec.map(x=>-x);
+    return {val,vec};
+  });
+  out.sort((x,y)=>x.val-y.val);
+  return out;
+}
+const matvec=(M,v)=>M.map(r=>r.reduce((s,x,j)=>s+x*v[j],0));
+const sum=v=>v.reduce((a,b)=>a+b,0);
+const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0);
+const maxAbs=v=>Math.max(...v.map(Math.abs));
+function fmt(x,d){
+  if(!isFinite(x))return x>0?"∞":"−∞";
+  if(Math.abs(x-Math.round(x))<1e-9&&Math.abs(x)<1e7)return String(Math.round(x)).replace("-","−");
+  const dd=d==null?3:d;let s=Math.abs(x)>=1e5?x.toExponential(2):x.toFixed(dd);
+  if(Number(s)===0)s=(0).toFixed(dd);
+  return s.replace("-","−");
+}
+
+/* ---------- state ---------- */
+let G,n,A,deg,L,EIG,zeroCount,lam2;
+const S1={v:[],step:0,hist:[]};
+const S2={v0:[],v:[],t:0,playing:false,sign:-1,rate:1,sel:0,hist:[],stopped:false,scale:1,node:0,custom:null};
+const S3={c:[],on:[],t:0,T:5,playing:false,scale:1};
+let refs1,refs2,refs3;
+const $=id=>document.getElementById(id);
+
+const sel=$("graphSel");
+Object.entries(GRAPHS).forEach(([k,g])=>{const o=document.createElement("option");o.value=k;o.textContent=g.name;sel.appendChild(o)});
+
+function loadGraph(key){
+  G=GRAPHS[key];n=G.pos.length;
+  A=[...Array(n)].map(()=>Array(n).fill(0));
+  G.edges.forEach(([i,j])=>{A[i][j]=1;A[j][i]=1});
+  deg=A.map(r=>sum(r));
+  L=A.map((r,i)=>r.map((x,j)=>i===j?deg[i]:-x));
+  EIG=eigSym(L);
+  zeroCount=EIG.filter(e=>e.val===0).length;
+  lam2=(EIG.find(e=>e.val>0)||{val:1}).val;
+  $("newRandom").hidden=key!=="random";
+  refs1=buildSVG($("g1"),i=>{S1.v=unit(i);S1.step=0;S1.hist=[1];render1()});
+  refs2=buildSVG($("g2"),i=>{S2.v[i]+=1;S2.sel=i;S2.scale=Math.max(S2.scale,maxAbs(S2.v));S2.stopped=false;render2()});
+  refs3=buildSVG($("g3"),null);
+  $("icNode").innerHTML=[...Array(n).keys()].map(i=>'<option value="'+i+'">'+(i+1)+'</option>').join("");
+  S2.node=G.start;$("icNode").value=G.start;S2.custom=null;
+  reset1();applyIC();buildModes();setMix("fromS2");
+}
+function unit(i){const v=Array(n).fill(0);v[i]=1;return v}
+
+/* ---------- SVG ---------- */
+function buildSVG(svg,onClick,thumb){
+  svg.innerHTML="";
+  const gH=document.createElementNS(SVGNS,"g"),gE=document.createElementNS(SVGNS,"g"),gN=document.createElementNS(SVGNS,"g");
+  svg.append(gH,gE,gN);
+  G.edges.forEach(([i,j])=>{const l=document.createElementNS(SVGNS,"line");
+    l.setAttribute("x1",G.pos[i][0]);l.setAttribute("y1",G.pos[i][1]);l.setAttribute("x2",G.pos[j][0]);l.setAttribute("y2",G.pos[j][1]);
+    l.setAttribute("class","edge");gE.appendChild(l)});
+  const halos=[],cores=[],vals=[];
+  G.pos.forEach(([x,y],i)=>{
+    const h=document.createElementNS(SVGNS,"circle");h.setAttribute("cx",x);h.setAttribute("cy",y);h.setAttribute("r",14);h.setAttribute("class","halo");gH.appendChild(h);halos.push(h);
+    const g=document.createElementNS(SVGNS,"g");g.setAttribute("class","nodeg");
+    if(onClick){g.setAttribute("tabindex","0");g.setAttribute("role","button");g.setAttribute("aria-label","Node "+(i+1));
+      g.addEventListener("click",()=>onClick(i));
+      g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick(i)}});}
+    else g.style.cursor="default";
+    const c=document.createElementNS(SVGNS,"circle");c.setAttribute("cx",x);c.setAttribute("cy",y);c.setAttribute("r",thumb?16:13);c.setAttribute("class","core");
+    g.appendChild(c);cores.push(c);
+    if(!thumb){
+      const t=document.createElementNS(SVGNS,"text");t.setAttribute("x",x);t.setAttribute("y",y);t.setAttribute("class","nlabel");t.textContent=i+1;g.appendChild(t);
+      const vt=document.createElementNS(SVGNS,"text");vt.setAttribute("x",x);vt.setAttribute("y",y>140?y+36:y-26);vt.setAttribute("class","nval");
+      gN.appendChild(g);gN.appendChild(vt);vals.push(vt);
+    }else gN.appendChild(g);
+  });
+  return {svg,halos,cores,vals};
+}
+const haloR=f=>Math.min(72,14+38*Math.sqrt(Math.max(0,f)));
+function paint(refs,v,scale,digits){
+  v.forEach((x,i)=>{const h=refs.halos[i];h.setAttribute("r",haloR(Math.abs(x)/scale));h.classList.toggle("neg",x<-1e-12);
+    if(refs.vals[i])refs.vals[i].textContent=fmt(x,digits==null?3:digits)});
+}
+
+/* ---------- matrices ---------- */
+function matHTML(M,opts={}){
+  let h='<table class="mat">';
+  M.forEach((row,i)=>{h+='<tr'+(opts.hlRow===i?' class="hl"':'')+'>';
+    row.forEach((x,j)=>{let c=x===0?"z":"";if(opts.lap&&x!==0)c=i===j?"diag":"off";h+='<td class="'+c+'">'+fmt(x,opts.d)+'</td>'});h+='</tr>'});
+  return h+'</table>';
+}
+const colHTML=(v,d,hl)=>matHTML(v.map(x=>[x]),{d,hlRow:hl});
+
+/* ---------- section 1 ---------- */
+function reset1(){S1.v=unit(G.start);S1.step=0;S1.hist=[1];render1()}
+$("reset1").onclick=reset1;
+$("step1").onclick=()=>{
+  let w=matvec(A,S1.v);
+  if($("norm1").checked){const s=sum(w);if(s>0)w=w.map(x=>x/s)}
+  S1.v=w;S1.step++;S1.hist.push(sum(w));render1();
+};
+$("norm1").onchange=()=>{if($("norm1").checked){const s=sum(S1.v);if(s>0)S1.v=S1.v.map(x=>x/s)}S1.hist=[sum(S1.v)];render1()};
+function isBipartite(){
+  const col=Array(n).fill(-1);
+  for(let s=0;s<n;s++){if(col[s]>=0)continue;col[s]=0;const q=[s];
+    while(q.length){const u=q.shift();for(let w=0;w<n;w++)if(A[u][w]){if(col[w]<0){col[w]=1-col[u];q.push(w)}else if(col[w]===col[u])return false}}}
+  return true;
+}
+function render1(){
+  const v=S1.v,next=matvec(A,v),d=$("norm1").checked?3:0;
+  paint(refs1,v,Math.max(maxAbs(v),1e-12));
+  $("eq1").innerHTML='<span class="sym"><b>A</b> =</span>'+matHTML(A)+
+    '<span class="sym">&nbsp; <span class="m">v</span><sub>'+S1.step+'</sub> =</span>'+colHTML(v,d)+
+    '<span class="sym">&nbsp; <b>A</b><span class="m">v</span><sub>'+S1.step+'</sub> =</span>'+colHTML(next,d);
+  const h=S1.hist,ratio=h.length>1&&h[h.length-2]>0?h[h.length-1]/h[h.length-2]:null;
+  $("read1").innerHTML='<span>Step <b>'+S1.step+'</b></span><span>Total on the network <b>'+fmt(sum(v),3)+'</b></span>'+
+    (ratio!=null&&!$("norm1").checked?'<span>Grew by ×<b>'+fmt(ratio,2)+'</b> this step</span>':'');
+  const bip=isBipartite();let msg;
+  if($("norm1").checked){
+    msg=bip?"After rescaling, a bipartite network like this one keeps alternating between its two sides instead of settling. The pattern repeats every two steps."
+           :"After rescaling, repeated multiplication settles onto the leading eigenvector of A, the pattern that eigenvector centrality is built on.";
+  }else{
+    msg="Each node hands its full amount to every neighbor, so a node with k edges multiplies what it holds by k. That is why the slides call this spreading unnormalized: the quantity is not conserved.";
+    if(bip)msg+=" This network is bipartite, so the quantity also sloshes back and forth between its two sides.";
+  }
+  $("note1").textContent=msg;
+}
+
+/* ---------- section 2: initial conditions ---------- */
+function makeIC(kind){
+  if(kind==="one")return unit(S2.node);
+  if(kind==="uniform")return Array(n).fill(1);
+  if(kind==="random")return [...Array(n)].map(()=>Math.round(Math.random()*100)/100);
+  if(kind==="ripple"){const x=(EIG.find(e=>e.val>0)||EIG[0]).vec;const m=maxAbs(x);return x.map(y=>Math.round((1+0.9*y/m)*1000)/1000)}
+  if(kind==="custom"){if(!S2.custom||S2.custom.length!==n)S2.custom=S2.v0.length===n?S2.v0.map(x=>Math.round(x*1000)/1000):unit(S2.node);return S2.custom.slice()}
+}
+function applyIC(keepRandom){
+  const kind=$("ic").value;
+  $("icNodeWrap").hidden=kind!=="one";$("reroll").hidden=kind!=="random";
+  if(!(keepRandom&&kind==="random"&&S2.v0.length===n))S2.v0=makeIC(kind);
+  $("customBox").hidden=kind!=="custom";
+  if(kind==="custom")buildCustom();
+  if(kind==="one")S2.sel=S2.node;
+  restart2();
+}
+function buildCustom(){
+  const box=$("customBox");
+  box.innerHTML=S2.custom.map((x,i)=>'<label>node '+(i+1)+' <input type="number" step="0.1" value="'+x+'" data-i="'+i+'"></label>').join("");
+  box.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",()=>{
+    const val=parseFloat(inp.value);S2.custom[+inp.dataset.i]=isFinite(val)?val:0;S2.v0=S2.custom.slice();restart2();
+  }));
+}
+$("ic").onchange=()=>applyIC();
+$("icNode").onchange=()=>{S2.node=+$("icNode").value;applyIC()};
+$("reroll").onclick=()=>applyIC();
+
+/* ---------- section 2: simulation ---------- */
+function restart2(){
+  S2.v=S2.v0.slice();S2.t=0;S2.hist=[[0,...S2.v]];S2.stopped=false;
+  S2.scale=Math.max(maxAbs(S2.v),sum(S2.v.map(Math.abs))/2,1e-9);
+  if(S2.sel>=n)S2.sel=0;
+  setPlaying(false);buildLegend2();render2();
+}
+$("reset2").onclick=()=>applyIC(true);
+function setPlaying(p){S2.playing=p;$("play2").textContent=p?"Pause":"Play";$("g2").classList.toggle("anim",p);last2=null}
+$("play2").onclick=()=>{if(S2.stopped)restart2();setPlaying(!S2.playing)};
+$("rate2").oninput=e=>{S2.rate=+e.target.value;$("rateVal").textContent=S2.rate.toFixed(1);render2()};
+function setSign(s){S2.sign=s;$("signNeg").setAttribute("aria-pressed",s<0);$("signPos").setAttribute("aria-pressed",s>0);restart2()}
+$("signNeg").onclick=()=>setSign(-1);$("signPos").onclick=()=>setSign(1);
+
+const deriv=v=>matvec(L,v).map(x=>S2.sign*S2.rate*x);
+function rk4(v,h){
+  const k1=deriv(v),k2=deriv(v.map((x,i)=>x+h/2*k1[i])),k3=deriv(v.map((x,i)=>x+h/2*k2[i])),k4=deriv(v.map((x,i)=>x+h*k3[i]));
+  return v.map((x,i)=>x+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+}
+const spread=v=>{if(zeroCount!==1)return 1;const m=sum(v)/n;return maxAbs(v.map(x=>x-m))};
+function advance(dt){
+  let T=dt;while(T>1e-9){const s=Math.min(0.005,T);S2.v=rk4(S2.v,s);S2.t+=s;T-=s}
+  S2.hist.push([S2.t,...S2.v]);
+  if(S2.hist.length>2400)S2.hist=S2.hist.filter((_,i)=>i%2===0||i===S2.hist.length-1);
+  if(maxAbs(S2.v)>500*Math.max(1,S2.scale)){S2.stopped=true;setPlaying(false)}
+  if(S2.sign<0&&spread(S2.v)<1e-5)setPlaying(false);
+}
+
+function sysRows(){
+  let h="";
+  for(let i=0;i<n;i++){
+    const nb=[];for(let j=0;j<n;j++)if(A[i][j])nb.push(j);
+    const vi='<span class="m">v</span><sub>'+(i+1)+'</sub>',k=deg[i];
+    const kv=(k===1?"":k)+vi;
+    const nbTxt=sgn=>nb.length?nb.map((j,idx)=>(idx||sgn==="−"?sgn+" ":"")+'<span class="m">v</span><sub>'+(j+1)+'</sub>').join(" "):"0";
+    let self,nbT;
+    if(k===0){self='0';nbT='0'}
+    else if(S2.sign<0){self='−'+kv;nbT=nbTxt("+").replace(/^(?!\+)/,"+ ")}
+    else{self=kv;nbT=nbTxt("−")}
+    const rhs=(S2.sign<0?matvec(L,S2.v)[i]*-1:matvec(L,S2.v)[i])*S2.rate;
+    h+='<tr data-i="'+i+'"'+(i===S2.sel?' class="hl"':'')+'><td class="lhs">d'+vi+'/d<span class="m">t</span></td><td>=</td>'+
+       '<td><span class="box b">'+self+'</span></td><td><span class="box r">'+nbT+'</span></td>'+
+       '<td class="val">= '+fmt(rhs,3)+'</td></tr>';
+  }
+  return h;
+}
+$("eqs").addEventListener("click",e=>{const tr=e.target.closest("tr");if(tr){S2.sel=+tr.dataset.i;render2()}});
+
+function render2(){
+  const v=S2.v;
+  paint(refs2,v,S2.scale);
+  v.forEach((_,i)=>{refs2.cores[i].style.stroke=SERIES[i%SERIES.length];refs2.cores[i].style.strokeWidth=i===S2.sel?"5":"3"});
+  $("sysCap").innerHTML=(S2.rate===1?"":"Each right-hand side is also multiplied by <span class=\"m\">c</span> = "+S2.rate.toFixed(1)+". ")+
+    "The numbers on the right are the current rates of change. Click a row to highlight its node in <b>L</b> below.";
+  $("eqs").innerHTML=sysRows();
+  $("boxkey").innerHTML=S2.sign<0
+    ?'<span class="b"><i></i>outflow, proportional to the degree</span><span class="r"><i></i>inflow from neighbors along edges</span>'
+    :'<span class="b"><i></i>“self-replication” proportional to the degree</span><span class="r"><i></i>“leakage” to other nodes by edges</span>';
+  const m=sum(v);
+  $("read2").innerHTML='<span>Time <span class="m">t</span> = <b>'+S2.t.toFixed(2)+'</b></span><span>Total <b>'+fmt(m,3)+'</b></span>'+
+    (zeroCount===1?'<span>Steady state: every node at <b>'+fmt(m/n,3)+'</b></span>':'');
+  $("eq2").innerHTML='<span class="sym"><b>L</b> =</span>'+matHTML(L,{lap:true,hlRow:S2.sel})+'<span class="sym">&nbsp;<span class="m">v</span>(<span class="m">t</span>) =</span>'+colHTML(v,3,S2.sel);
+  let note;
+  if(S2.stopped)note='<span class="warn">Stopped: the values grew more than 500 times larger.</span> With +L the uniform state is still a steady state, but any difference between nodes is amplified at rate e<sup>λt</sup>. The total stays the same only because large positive and negative values cancel. Press Play to start over.';
+  else if(S2.sign>0)note="This is the sign as written on the slides. Watch the total: it stays constant while individual nodes run off to large positive and negative values. Only a perfectly uniform start stays put.";
+  else if(zeroCount>1)note="This network has "+zeroCount+" separate pieces. The quantity cannot cross between them, so each piece levels out on its own and the final state is not the same everywhere.";
+  else note="The rows and columns of L each sum to zero, so whatever leaves one node arrives at another: the total never changes. Diffusion stops once every node holds the same amount, because then Lv = 0.";
+  $("note2").innerHTML=note;
+  drawPlot2();
+}
+
+/* ---------- plots ---------- */
+function prepCanvas(cv){
+  const ctx=cv.getContext("2d"),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement);
+  return {ctx,W,H,ink:cs.getPropertyValue("--muted").trim(),line:cs.getPropertyValue("--line").trim(),fg:cs.getPropertyValue("--ink").trim()};
+}
+function axes(P,tmax,ymin,ymax){
+  const {ctx,W,H,ink,line}=P,pl=46,pr=14,pt=14,pb=28,w=W-pl-pr,h=H-pt-pb;
+  const X=t=>pl+w*t/tmax,Y=y=>pt+h*(1-(y-ymin)/(ymax-ymin));
+  ctx.font='12px "Source Serif 4",Georgia,serif';ctx.fillStyle=ink;ctx.strokeStyle=line;ctx.lineWidth=1;
+  for(let k=0;k<=4;k++){const y=ymin+(ymax-ymin)*k/4,yy=Y(y);ctx.beginPath();ctx.moveTo(pl,yy);ctx.lineTo(pl+w,yy);ctx.stroke();ctx.textAlign="right";ctx.fillText(fmt(y,2),pl-6,yy+4)}
+  ctx.textAlign="center";for(let k=0;k<=5;k++){const t=tmax*k/5;ctx.fillText(t.toFixed(1),X(t),H-8)}
+  return {X,Y,pl,pt,w,h};
+}
+function buildLegend2(){$("legend2").innerHTML=[...Array(n).keys()].map(i=>'<span><i style="background:'+SERIES[i%SERIES.length]+'"></i>node '+(i+1)+'</span>').join("")+
+  (zeroCount===1?'<span><i style="background:none;border-top:2px dashed currentColor;height:0"></i>steady state</span>':'')}
+function drawPlot2(){
+  const P=prepCanvas($("plot2")),hist=S2.hist,tmax=Math.max(3/S2.rate,S2.t);
+  let ymin=0,ymax=0.5;hist.forEach(r=>{for(let k=1;k<r.length;k++){if(r[k]<ymin)ymin=r[k];if(r[k]>ymax)ymax=r[k]}});
+  const pad=(ymax-ymin)*.06;ymax+=pad;if(ymin<0)ymin-=pad;
+  const {X,Y}=axes(P,tmax,ymin,ymax),ctx=P.ctx;
+  if(zeroCount===1){const ss=sum(S2.v)/n;ctx.setLineDash([5,4]);ctx.strokeStyle=P.ink;ctx.beginPath();ctx.moveTo(X(0),Y(ss));ctx.lineTo(X(tmax),Y(ss));ctx.stroke();ctx.setLineDash([])}
+  ctx.lineWidth=2.2;
+  for(let i=0;i<n;i++){ctx.strokeStyle=SERIES[i%SERIES.length];ctx.beginPath();
+    hist.forEach((r,k)=>{const x=X(r[0]),y=Y(r[i+1]);k?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}
+}
+
+/* ---------- section 3: eigenmodes ---------- */
+let modeRefs=[];
+function buildModes(){
+  S3.T=Math.min(30,Math.max(3,5/lam2));
+  $("t3").max=S3.T;$("t3").step=S3.T/600;
+  const box=$("modes");box.innerHTML="";modeRefs=[];
+  EIG.forEach((e,i)=>{
+    const col=MODEC[i%MODEC.length];
+    const row=document.createElement("div");row.className="mode-row";row.style.setProperty("--mc",col);
+    const life=e.val===0?"never fades":"fades as e<sup>−"+(Math.abs(e.val-1)<1e-9?"":fmt(e.val,2))+"<span class=\"m\">t</span></sup>";
+    row.innerHTML='<input type="checkbox" checked aria-label="Include mode '+(i+1)+'">'+
+      '<svg class="thumb" viewBox="0 0 400 280" aria-hidden="true"></svg>'+
+      '<div><div class="mode-top"><span>λ<sub>'+(i+1)+'</sub> = '+fmt(e.val,3)+', '+life+'</span><span class="now"></span></div>'+
+      '<div class="mode-ctl"><span><span class="m">c</span><sub>'+(i+1)+'</sub></span><input type="range" min="-1.5" max="1.5" step="0.01" aria-label="Starting amount of mode '+(i+1)+'"><output></output></div>'+
+      '<div class="bar"><i></i></div></div>';
+    box.appendChild(row);
+    const svg=row.querySelector("svg"),tr=buildSVG(svg,null,true);
+    const mx=maxAbs(e.vec);
+    e.vec.forEach((x,k)=>{tr.halos[k].setAttribute("r",Math.abs(x)<1e-9?0:haloR(Math.abs(x)/mx*0.9));tr.halos[k].classList.toggle("neg",x<0)});
+    const chk=row.querySelector("input[type=checkbox]"),sl=row.querySelector("input[type=range]");
+    chk.onchange=()=>{S3.on[i]=chk.checked;row.classList.toggle("off",!chk.checked);rescale3();render3()};
+    sl.oninput=()=>{S3.c[i]=+sl.value;rescale3();render3()};
+    modeRefs.push({row,chk,sl,out:row.querySelector("output"),now:row.querySelector(".now"),bar:row.querySelector(".bar i")});
+  });
+}
+function setMix(kind){
+  if(kind==="fromS2")S3.c=EIG.map(e=>dot(e.vec,S2.v0));
+  else if(kind==="random")S3.c=EIG.map((e,i)=>i<zeroCount?0.8:Math.round((Math.random()*2-1)*100)/100);
+  else S3.c=EIG.map((e,i)=>i===0?1:0);
+  S3.c=S3.c.map(x=>Math.max(-1.5,Math.min(1.5,x)));
+  S3.on=EIG.map(()=>true);
+  modeRefs.forEach((m,i)=>{m.chk.checked=true;m.row.classList.remove("off");m.sl.value=S3.c[i]});
+  setT3(0);rescale3();render3();
+}
+$("fromS2").onclick=()=>setMix("fromS2");$("mixRandom").onclick=()=>setMix("random");$("onlySteady").onclick=()=>setMix("steady");
+function amp(i,t){return S3.on[i]?S3.c[i]*Math.exp(-EIG[i].val*t):0}
+function state3(t){const v=Array(n).fill(0);EIG.forEach((e,i)=>{const a=amp(i,t);if(a)e.vec.forEach((x,k)=>v[k]+=a*x)});return v}
+function rescale3(){S3.scale=Math.max(maxAbs(state3(0)),0.05);S3.cmax=Math.max(...S3.c.map(Math.abs),0.05)}
+function setT3(t){S3.t=t;$("t3").value=t;$("t3v").textContent=t.toFixed(2)}
+$("t3").oninput=e=>{setPlaying3(false);setT3(+e.target.value);render3()};
+function setPlaying3(p){S3.playing=p;$("play3").textContent=p?"Pause":"Play";$("g3").classList.toggle("anim",p);last3=null}
+$("play3").onclick=()=>{if(!S3.playing&&S3.t>=S3.T-1e-6)setT3(0);setPlaying3(!S3.playing)};
+
+function render3(){
+  const v=state3(S3.t);
+  paint(refs3,v,S3.scale,2);
+  modeRefs.forEach((m,i)=>{
+    const a=amp(i,S3.t),f=Math.min(1,Math.abs(a)/S3.cmax)*50;
+    m.out.textContent=fmt(S3.c[i],2);
+    m.now.textContent=S3.on[i]?"now "+fmt(a,3):"left out";
+    m.bar.style.width=f+"%";m.bar.style.left=(a>=0?50:50-f)+"%";
+  });
+  // formula
+  const parts=EIG.map((e,i)=>{if(!S3.on[i]||Math.abs(S3.c[i])<0.005)return null;
+    return '<span class="t" style="--mc:'+MODEC[i%MODEC.length]+'">'+fmt(amp(i,S3.t),3)+' <span class="m">x</span><sub>'+(i+1)+'</sub></span>'}).filter(Boolean);
+  $("formula").innerHTML='<span class="m">v</span>('+S3.t.toFixed(2)+') = '+(parts.length?parts.join(" + ").replace(/\+ <span class="t"([^>]*)>−/g,'− <span class="t"$1>'):"0");
+  const tot=sum(v);
+  $("cap3").textContent=zeroCount===1
+    ?"Total "+fmt(tot,3)+". Only the λ = 0 ingredient carries the total, so it never changes; everything else adds up to zero."
+    :"Total "+fmt(tot,3)+". Each separate piece of the network has its own λ = 0 ingredient, so each piece keeps its own total.";
+  let note;
+  if(zeroCount===1){
+    note="The slowest ingredient that can fade is λ₂ = "+fmt(lam2,3)+", so after about t = "+fmt(1/lam2,1)+" what's left of the differences is roughly that one pattern. Try leaving out the steady state: the network then holds zero in total, and everything decays to nothing.";
+    if(G===GRAPHS.barbell)note+=" Here λ₂ is small because of the single bridge: its pattern is positive on one cluster and negative on the other, and that imbalance can only drain through one edge.";
+  }else note="With "+zeroCount+" eigenvalues equal to 0, there are "+zeroCount+" ingredients that never fade. That is why the final state depends on how much starts in each piece.";
+  $("note3").textContent=note;
+  drawPlot3();
+}
+function drawPlot3(){
+  const P=prepCanvas($("plot3")),T=S3.T,ym=S3.cmax*1.08;
+  const {X,Y}=axes(P,T,-ym,ym),ctx=P.ctx;
+  ctx.lineWidth=2.2;
+  EIG.forEach((e,i)=>{if(!S3.on[i])return;ctx.strokeStyle=MODEC[i%MODEC.length];ctx.beginPath();
+    for(let k=0;k<=160;k++){const t=T*k/160,x=X(t),y=Y(amp(i,t));k?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke()});
+  ctx.strokeStyle=P.fg;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(X(S3.t),Y(ym));ctx.lineTo(X(S3.t),Y(-ym));ctx.stroke();
+}
+
+/* ---------- loop ---------- */
+let last2=null,last3=null;
+function frame(ts){
+  if(S2.playing){if(last2!=null)advance(Math.min(0.05,(ts-last2)/1000));last2=ts;render2()}
+  if(S3.playing){
+    if(last3!=null){const nt=Math.min(S3.T,S3.t+Math.min(0.05,(ts-last3)/1000)*S3.T/6);setT3(nt);if(nt>=S3.T)setPlaying3(false)}
+    last3=ts;render3();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+const ro=new ResizeObserver(()=>{drawPlot2();drawPlot3()});ro.observe($("plot2"));ro.observe($("plot3"));
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{drawPlot2();drawPlot3()});
+
+sel.onchange=()=>loadGraph(sel.value);
+$("newRandom").onclick=()=>{GRAPHS.random=makeRandom();loadGraph("random")};
+loadGraph("tri");
+})();
+</script>
+</body>
+</html>
