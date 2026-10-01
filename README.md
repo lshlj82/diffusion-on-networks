@@ -10,7 +10,7 @@ The page has three parts. They all use the same network, which you pick from the
 
 **1. Spreading with the adjacency matrix.** Step through $\mathbf{v}_{n+1} = \mathbf{A}\mathbf{v}_n$ one multiplication at a time. The page shows the matrix, the current vector, and the result. You can watch the total grow, because a node with $k$ edges multiplies what it holds by $k$. On bipartite networks the quantity sloshes back and forth between the two sides. You can also rescale after each step so the total stays at 1.
 
-**2. Diffusion with the Laplacian.** This runs the continuous dynamics $d\mathbf{v}/dt = -\mathbf{L}\mathbf{v}$.
+**2. Diffusion with the Laplacian.** This runs the continuous dynamics $d\mathbf{v}/dt = -c\mathbf{L}\mathbf{v}$.
 - Choose how the run starts: everything on one node, the same amount everywhere, random amounts, uniform plus the slowest ripple, or values you type in.
 - The full system of equations is shown, one line per node, using the color-boxed notation from the slides. Blue boxes are the degree term and red boxes are the neighbor term, and each line shows its current rate of change.
 - A time-series plot shows every node's value and the steady-state level.
@@ -38,7 +38,7 @@ It's one self-contained HTML file with no build step and no dependencies.
 - **Locally:** open `index.html` in any modern browser.
 - **GitHub Pages:** push this folder to a repository. Then go to *Settings → Pages* and choose to deploy from the branch that contains `index.html`. The demo will be served at `https://<user>.github.io/<repo>/`.
 
-The only external requests are for the Kalam and Source Serif 4 web fonts from Google Fonts. Without a network connection, the page falls back to system fonts and still works fully.
+The only external requests are for the Source Sans 3 and Source Serif 4 web fonts from Google Fonts. Without a network connection, the page falls back to system fonts and still works fully.
 
 ## How it works
 
