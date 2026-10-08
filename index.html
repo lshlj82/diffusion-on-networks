@@ -148,8 +148,19 @@ footer{max-width:1120px;margin:0 auto;padding:1.6rem 1.2rem 3rem;color:var(--mut
 footer p{max-width:72ch}
 @media (prefers-reduced-motion:reduce){.halo{transition:none}}
 </style>
+<script>try { const t = localStorage.getItem("netsci-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+button.theme-btn{position:fixed; z-index:20; top:calc(env(safe-area-inset-top, 0px) + 12px); right:calc(env(safe-area-inset-right, 0px) + 12px);
+  width:40px; height:40px; padding:0; border-radius:50%; display:grid; place-items:center; cursor:pointer;
+  background:var(--surface); color:var(--ink); border:1px solid var(--line); box-shadow:0 1px 4px rgba(0,0,0,.12)}
+button.theme-btn:hover{background:var(--surface); color:var(--ink); border-color:var(--ink)}
+button.theme-btn:focus-visible{outline:3px solid var(--cool); outline-offset:2px}
+.top{padding-right:56px}
+button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+</style>
 </head>
 <body>
+<button id="themeBtn" class="theme-btn" type="button" aria-label="Switch to light mode"></button>
 <header class="top">
   <div class="top-inner">
     <h1>Diffusion on networks</h1>
@@ -669,10 +680,26 @@ function frame(ts){
 requestAnimationFrame(frame);
 const ro=new ResizeObserver(()=>{drawPlot2();drawPlot3()});ro.observe($("plot2"));ro.observe($("plot3"));
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{drawPlot2();drawPlot3()});
+new MutationObserver(()=>{drawPlot2();drawPlot3()}).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 
 sel.onchange=()=>loadGraph(sel.value);
 $("newRandom").onclick=()=>{GRAPHS.random=makeRandom();loadGraph("random")};
 loadGraph("tri");
+})();
+</script>
+<script>
+(() => {
+  // light/dark switch; the choice is remembered across all of the course demos
+  const btn = document.getElementById("themeBtn"), root = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
+  const SUN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>';
+  const current = () => root.dataset.theme || (mq.matches ? "dark" : "light");
+  const sync = () => { const dark = current() === "dark", label = dark ? "Switch to light mode" : "Switch to dark mode";
+    btn.innerHTML = dark ? SUN : MOON; btn.setAttribute("aria-label", label); btn.title = label; };
+  btn.addEventListener("click", () => { const next = current() === "dark" ? "light" : "dark"; root.dataset.theme = next;
+    try { localStorage.setItem("netsci-theme", next); } catch (e) {} sync(); });
+  mq.addEventListener("change", sync);
+  sync();
 })();
 </script>
 </body>
