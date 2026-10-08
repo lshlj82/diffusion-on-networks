@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Diffusion on networks: an interactive demo</title>
+<title>Diffusion on networks · 네트워크 위의 확산 | Network Science demos</title>
 <meta name="description" content="Interactive demo of spreading and diffusion on networks with the adjacency and Laplacian matrices. Made by Claude Opus 5.5, based on Sang Hoon Lee's lecture slides.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,7 +48,7 @@ b.v{font-weight:600}
 .small{font-size:.92rem}
 
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
-.top-inner{max-width:1120px;margin:0 auto;padding:.7rem 1.2rem;display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;align-items:center;justify-content:space-between}
+.top-inner{max-width:1120px;margin:0 auto;padding:.7rem 1.2rem;display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;align-items:center;justify-content:flex-end}
 .picker{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
 .picker label{color:var(--muted);font-size:.95rem}
 select,button,input[type=number]{font:inherit;font-size:.95rem;color:var(--ink);background:var(--surface);
@@ -158,12 +158,18 @@ button.theme-btn:focus-visible{outline:3px solid var(--cool); outline-offset:2px
 .top{padding-right:56px}
 button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
 </style>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@600&family=Noto+Serif+KR:wght@400&display=swap" rel="stylesheet">
+<style>
+/* Course-wide demo title: the same on every demo page and on the course landing page */
+h1.course-title{font-family:"STIX Two Text","Noto Serif KR",Cambria,"Times New Roman",serif !important;font-weight:600 !important;font-style:normal !important;font-size:clamp(30px,3.6vw,44px) !important;line-height:1.08 !important;letter-spacing:-.01em !important;text-transform:none !important;color:var(--ink) !important;word-break:keep-all}
+h1.course-title .course-title-ko{display:block;font-family:"Noto Serif KR","STIX Two Text",serif;font-weight:400;font-size:.5em;line-height:1.3;letter-spacing:0;color:var(--muted);margin:.3em 0 0}
+.intro h1.course-title{margin:.6rem 0 1rem}
+</style>
 </head>
 <body>
 <button id="themeBtn" class="theme-btn" type="button" aria-label="Switch to light mode"></button>
 <header class="top">
   <div class="top-inner">
-    <h1>Diffusion on networks</h1>
     <div class="picker">
       <label for="graphSel">Network</label>
       <select id="graphSel"></select>
@@ -174,6 +180,7 @@ button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; st
 
 <main>
   <div class="intro">
+    <h1 class="course-title">Diffusion on networks<span class="course-title-ko" lang="ko">네트워크 위의 확산</span></h1>
     <p>Some quantity sits on the nodes of a network and moves along its edges. The same network appears in all three parts below; pick a different one at the top and everything rebuilds. The circle around each node shows how much of the quantity it holds: red for positive amounts, blue for negative ones.</p>
   </div>
 
