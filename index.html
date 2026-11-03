@@ -11,7 +11,7 @@
 <style>
 :root{
   --bg:#F5F7FA; --surface:#FFFFFF; --ink:#1D2433; --muted:#5B6476; --line:#D5DAE3;
-  --heat:#E5675A; --cool:#2F6FB5; --mode:#8A4FD6; --node:#A9474F; --node-ink:#FBE3E1;
+  --heat:#E5675A; --heat-text:#B93A2D; --cool:#2F6FB5; --mode:#8A4FD6; --node:#A9474F; --node-ink:#FBE3E1;
   --soft:#EEF1F6;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -21,13 +21,13 @@
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --bg:#141922; --surface:#1C2330; --ink:#E7EBF2; --muted:#9AA4B5; --line:#334055;
-    --heat:#F07A6C; --cool:#6FA3E6; --mode:#B48AF0; --node:#C2575F; --node-ink:#2A1416;
+    --heat:#F07A6C; --heat-text:#F07A6C; --cool:#6FA3E6; --mode:#B48AF0; --node:#C2575F; --node-ink:#2A1416;
     --soft:#232B3A; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#141922; --surface:#1C2330; --ink:#E7EBF2; --muted:#9AA4B5; --line:#334055;
-  --heat:#F07A6C; --cool:#6FA3E6; --mode:#B48AF0; --node:#C2575F; --node-ink:#2A1416;
+  --heat:#F07A6C; --heat-text:#F07A6C; --cool:#6FA3E6; --mode:#B48AF0; --node:#C2575F; --node-ink:#2A1416;
   --soft:#232B3A; color-scheme:dark;
 }
 *,*::before,*::after{box-sizing:inherit}
@@ -80,7 +80,7 @@ input[type=number]{width:5.2rem;padding:.25rem .45rem}
 .readout{display:flex;flex-wrap:wrap;gap:.3rem 1.4rem;font-size:.98rem;margin:.3rem 0 .6rem}
 .readout b{font-weight:600}
 .note{font-size:.95rem;background:var(--soft);border-radius:10px;padding:.7rem .9rem;max-width:68ch}
-.warn{color:var(--heat);font-weight:600}
+.warn{color:var(--heat-text);font-weight:600}
 .custom{display:flex;flex-wrap:wrap;gap:.4rem .9rem;background:var(--soft);border-radius:10px;padding:.6rem .8rem;margin-bottom:.6rem}
 .custom label{font-size:.92rem;display:flex;gap:.35rem;align-items:center}
 
@@ -92,7 +92,7 @@ table.mat td{padding:.05rem .45rem;text-align:right;min-width:1.6em}
 table.mat td.z{color:var(--muted)}
 table.mat tr.hl td{background:var(--soft)}
 table.mat td.diag{color:var(--cool);font-weight:600}
-table.mat td.off{color:var(--heat)}
+table.mat td.off{color:var(--heat-text)}
 
 /* equation system */
 .sysbox{overflow-x:auto;margin:.6rem 0 .2rem}
@@ -106,7 +106,7 @@ table.eqs td.val{color:var(--muted);font-size:.95rem;padding-left:.6rem}
 .box{border:2px solid;border-radius:8px;padding:.02rem .45rem;display:inline-block}
 .box.b{border-color:var(--cool)} .box.r{border-color:var(--heat)}
 .boxkey{display:flex;flex-wrap:wrap;gap:.3rem 1.2rem;font-size:.9rem;margin:.2rem 0 .6rem}
-.boxkey .b{color:var(--cool)} .boxkey .r{color:var(--heat)}
+.boxkey .b{color:var(--cool)} .boxkey .r{color:var(--heat-text)}
 .boxkey i{display:inline-block;width:14px;height:12px;border:2px solid;border-radius:4px;vertical-align:-1px;margin-right:.35rem}
 
 /* nodes */
@@ -396,6 +396,8 @@ function unit(i){const v=Array(n).fill(0);v[i]=1;return v}
 /* ---------- SVG ---------- */
 function buildSVG(svg,onClick,thumb){
   svg.innerHTML="";
+  // clickable diagrams expose their node buttons, so the container is a group rather than a single image
+  if(onClick)svg.setAttribute("role","group");
   const gH=document.createElementNS(SVGNS,"g"),gE=document.createElementNS(SVGNS,"g"),gN=document.createElementNS(SVGNS,"g");
   svg.append(gH,gE,gN);
   G.edges.forEach(([i,j])=>{const l=document.createElementNS(SVGNS,"line");
@@ -626,9 +628,10 @@ function setMix(kind){
   if(kind==="fromS2")S3.c=EIG.map(e=>dot(e.vec,S2.v0));
   else if(kind==="random")S3.c=EIG.map((e,i)=>i<zeroCount?0.8:Math.round((Math.random()*2-1)*100)/100);
   else S3.c=EIG.map((e,i)=>i===0?1:0);
-  S3.c=S3.c.map(x=>Math.max(-1.5,Math.min(1.5,x)));
+  // keep the exact coefficients (no clipping); widen a slider when an imported coefficient exceeds ±1.5
   S3.on=EIG.map(()=>true);
-  modeRefs.forEach((m,i)=>{m.chk.checked=true;m.row.classList.remove("off");m.sl.value=S3.c[i]});
+  modeRefs.forEach((m,i)=>{const r=Math.max(1.5,Math.ceil(Math.abs(S3.c[i])*100)/100);m.sl.min=-r;m.sl.max=r;
+    m.chk.checked=true;m.row.classList.remove("off");m.sl.value=S3.c[i]});
   setT3(0);rescale3();render3();
 }
 $("fromS2").onclick=()=>setMix("fromS2");$("mixRandom").onclick=()=>setMix("random");$("onlySteady").onclick=()=>setMix("steady");
