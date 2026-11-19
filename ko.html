@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<!-- lang-link:head -->
+<script>(function(){var p=null;try{p=localStorage.getItem("lshlj82-demo-lang")}catch(e){}if(p&&p!=="ko"&&!/[?&]stay\b/.test(location.search))location.replace("index.html"+location.hash);})();</script>
+<style>
+#langBtn{position:fixed;z-index:21;top:calc(env(safe-area-inset-top,0px) + 12px);right:calc(env(safe-area-inset-right,0px) + 60px);min-width:40px;height:40px;padding:0 10px;border-radius:20px;display:grid;place-items:center;cursor:pointer;text-decoration:none;font:600 14px/1 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;background:var(--lb-bg,rgba(255,255,255,.92));color:var(--lb-fg,#1d2633);border:1px solid var(--lb-bd,rgba(20,30,45,.18));box-shadow:0 1px 4px rgba(0,0,0,.12)}
+#langBtn:hover{border-color:currentColor}
+#langBtn:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}
+:root[data-theme="dark"] #langBtn{--lb-bg:rgba(22,28,38,.92);--lb-fg:#e8eef6;--lb-bd:rgba(255,255,255,.18)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #langBtn{--lb-bg:rgba(22,28,38,.92);--lb-fg:#e8eef6;--lb-bd:rgba(255,255,255,.18)}}
+@media print{#langBtn{display:none}}
+html[lang="ko"] body{word-break:keep-all;overflow-wrap:break-word}
+</style>
+<!-- lang-link:head-end -->
+
+
+
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>네트워크 위의 확산</title>
+<meta name="description" content="인접 행렬과 라플라시안 행렬로 네트워크 위의 퍼짐과 확산을 살펴보는 인터랙티브 데모. 이상훈 교수의 강의 슬라이드를 바탕으로 Claude Opus 5.5가 만들었습니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F7FA; --surface:#FFFFFF; --ink:#1D2433; --muted:#5B6476; --line:#D5DAE3;
+  --heat:#E5675A; --heat-text:#B93A2D; --cool:#2F6FB5; --mode:#8A4FD6; --node:#A9474F; --node-ink:#FBE3E1;
+  --soft:#EEF1F6;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#141922; --surface:#1C2330; --ink:#E7EBF2; --muted:#9AA4B5; --line:#334055;
+    --heat:#F07A6C; --heat-text:#F07A6C; --cool:#6FA3E6; --mode:#B48AF0; --node:#C2575F; --node-ink:#2A1416;
+    --soft:#232B3A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141922; --surface:#1C2330; --ink:#E7EBF2; --muted:#9AA4B5; --line:#334055;
+  --heat:#F07A6C; --heat-text:#F07A6C; --cool:#6FA3E6; --mode:#B48AF0; --node:#C2575F; --node-ink:#2A1416;
+  --soft:#232B3A; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 70px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans KR",Georgia,"Times New Roman",serif;font-size:17px;line-height:1.6;
+  font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:"IBM Plex Sans KR","Segoe UI",Helvetica,Arial,sans-serif;font-weight:600;line-height:1.2;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(1.35rem,3.2vw,1.8rem)}
+h2{font-size:clamp(1.3rem,2.8vw,1.65rem);display:flex;gap:.6rem;align-items:baseline}
+h2 .num{font-size:.8em;color:var(--muted);font-weight:400}
+h3{font-size:1.1rem;margin:1.4rem 0 .4rem}
+p{margin:.4rem 0 .9rem;max-width:68ch}
+.muted{color:var(--muted)}
+.m{font-style:italic}
+b.v{font-weight:600}
+.small{font-size:.92rem}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-inner{max-width:1120px;margin:0 auto;padding:.7rem 1.2rem;display:flex;flex-wrap:wrap;gap:.6rem 1.4rem;align-items:center;justify-content:flex-end}
+.picker{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.picker label{color:var(--muted);font-size:.95rem}
+select,button,input[type=number]{font:inherit;font-size:.95rem;color:var(--ink);background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;padding:.35rem .75rem}
+select,button{cursor:pointer}
+button:hover,select:hover{border-color:var(--muted)}
+button:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--mode);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:var(--surface)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+main{max-width:1120px;margin:0 auto;padding:1.4rem 1.2rem 3rem}
+.intro{padding:1rem 0 1.6rem;max-width:72ch}
+.intro p{font-size:1.08rem}
+section{padding:2rem 0 2.4rem;border-top:1px solid var(--line)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:1.6rem;margin-top:1rem;align-items:start}
+@media (max-width:860px){.split{grid-template-columns:minmax(0,1fr)}}
+.sticky-col{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px)}
+@media (max-width:860px){.sticky-col{position:static}}
+.graphbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:.4rem}
+.graphbox svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.hint{font-size:.88rem;color:var(--muted);margin:.3rem .6rem .4rem}
+.controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.8rem 0}
+.controls label{font-size:.95rem;color:var(--muted);display:flex;gap:.4rem;align-items:center}
+input[type=range]{accent-color:var(--heat);width:120px}
+input[type=checkbox]{accent-color:var(--mode);width:1rem;height:1rem;margin:0}
+input[type=number]{width:5.2rem;padding:.25rem .45rem}
+.readout{display:flex;flex-wrap:wrap;gap:.3rem 1.4rem;font-size:.98rem;margin:.3rem 0 .6rem}
+.readout b{font-weight:600}
+.note{font-size:.95rem;background:var(--soft);border-radius:10px;padding:.7rem .9rem;max-width:68ch}
+.warn{color:var(--heat-text);font-weight:600}
+.custom{display:flex;flex-wrap:wrap;gap:.4rem .9rem;background:var(--soft);border-radius:10px;padding:.6rem .8rem;margin-bottom:.6rem}
+.custom label{font-size:.92rem;display:flex;gap:.35rem;align-items:center}
+
+/* matrices */
+.eq{display:flex;align-items:center;gap:.5rem;overflow-x:auto;padding:.4rem 0 .6rem;font-size:1.05rem}
+.sym{white-space:nowrap}
+table.mat{border-collapse:collapse;font-size:.92rem;flex:none;border-left:1.5px solid var(--ink);border-right:1.5px solid var(--ink);border-radius:3px}
+table.mat td{padding:.05rem .45rem;text-align:right;min-width:1.6em}
+table.mat td.z{color:var(--muted)}
+table.mat tr.hl td{background:var(--soft)}
+table.mat td.diag{color:var(--cool);font-weight:600}
+table.mat td.off{color:var(--heat-text)}
+
+/* equation system */
+.sysbox{overflow-x:auto;margin:.6rem 0 .2rem}
+.sys{display:flex;align-items:stretch;gap:.5rem;width:max-content}
+.brace{width:12px;border:2px solid var(--ink);border-right:0;border-radius:12px 0 0 12px;flex:none}
+table.eqs{border-collapse:separate;border-spacing:.35rem .25rem;font-size:1.05rem}
+table.eqs td{white-space:nowrap;vertical-align:middle}
+table.eqs tr{cursor:pointer}
+table.eqs tr.hl td.lhs{background:var(--soft);border-radius:6px}
+table.eqs td.val{color:var(--muted);font-size:.95rem;padding-left:.6rem}
+.box{border:2px solid;border-radius:8px;padding:.02rem .45rem;display:inline-block}
+.box.b{border-color:var(--cool)} .box.r{border-color:var(--heat)}
+.boxkey{display:flex;flex-wrap:wrap;gap:.3rem 1.2rem;font-size:.9rem;margin:.2rem 0 .6rem}
+.boxkey .b{color:var(--cool)} .boxkey .r{color:var(--heat-text)}
+.boxkey i{display:inline-block;width:14px;height:12px;border:2px solid;border-radius:4px;vertical-align:-1px;margin-right:.35rem}
+
+/* nodes */
+.edge{stroke:var(--ink);stroke-width:2.2;stroke-linecap:round}
+.halo{fill:var(--heat);opacity:.6;transition:r .25s}
+.anim .halo{transition:none}
+.halo.neg{fill:var(--cool)}
+.core{fill:var(--node);stroke:var(--surface);stroke-width:1.5}
+.nlabel{fill:var(--node-ink);font:600 13px "IBM Plex Sans KR",Georgia,serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.nval{fill:var(--ink);font:13px "IBM Plex Sans KR",Georgia,serif;text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:var(--surface);stroke-width:3px}
+.nodeg{cursor:pointer}
+.nodeg:hover .core{stroke:var(--ink)}
+.thumb .edge{stroke-width:7}
+.thumb .core{stroke-width:0}
+.thumb .halo{transition:none}
+
+canvas{width:100%;display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+#plot2{height:220px} #plot3{height:200px}
+.legend{display:flex;flex-wrap:wrap;gap:.2rem .9rem;font-size:.88rem;color:var(--muted);margin:.4rem .2rem}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:.3rem}
+
+/* modes */
+.modes{display:flex;flex-direction:column;gap:.4rem}
+.mode-row{display:grid;grid-template-columns:1.2rem 92px minmax(0,1fr);gap:.4rem .8rem;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:.45rem .7rem;border-left:5px solid var(--mc)}
+.mode-row.off{opacity:.5}
+.mode-row svg{width:92px;height:auto;display:block}
+.mode-top{display:flex;justify-content:space-between;gap:.6rem;flex-wrap:wrap;font-size:.95rem}
+.mode-top .now{color:var(--muted)}
+.mode-ctl{display:flex;align-items:center;gap:.5rem;font-size:.9rem;color:var(--muted)}
+.mode-ctl input[type=range]{flex:1;min-width:90px;accent-color:var(--mc)}
+.mode-ctl output{min-width:3.4rem;text-align:right;color:var(--ink)}
+.bar{position:relative;height:10px;margin-top:.25rem}
+.bar::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;border-left:1px solid var(--line)}
+.bar i{position:absolute;top:0;height:100%;border-radius:3px;background:var(--mc)}
+.formula{font-size:1rem;overflow-x:auto;white-space:nowrap;padding:.4rem 0}
+.formula .t{border-bottom:3px solid var(--mc);padding:0 .1rem}
+
+footer{max-width:1120px;margin:0 auto;padding:1.6rem 1.2rem 3rem;color:var(--muted);font-size:.95rem;border-top:1px solid var(--line)}
+footer p{max-width:72ch}
+@media (prefers-reduced-motion:reduce){.halo{transition:none}}
+</style>
+<script>try { const t = localStorage.getItem("netsci-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+button.theme-btn{position:fixed; z-index:20; top:calc(env(safe-area-inset-top, 0px) + 12px); right:calc(env(safe-area-inset-right, 0px) + 12px);
+  width:40px; height:40px; padding:0; border-radius:50%; display:grid; place-items:center; cursor:pointer;
+  background:var(--surface); color:var(--ink); border:1px solid var(--line); box-shadow:0 1px 4px rgba(0,0,0,.12)}
+button.theme-btn:hover{background:var(--surface); color:var(--ink); border-color:var(--ink)}
+button.theme-btn:focus-visible{outline:3px solid var(--cool); outline-offset:2px}
+.top{padding-right:56px}
+button.theme-btn svg{width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=STIX+Two+Text:wght@600&family=Noto+Serif+KR:wght@400&display=swap" rel="stylesheet">
+<style>
+/* Course-wide demo title: the same on every demo page and on the course landing page */
+h1.course-title{font-family:"STIX Two Text","Noto Serif KR",Cambria,"Times New Roman",serif !important;font-weight:600 !important;font-style:normal !important;font-size:clamp(30px,3.6vw,44px) !important;line-height:1.08 !important;letter-spacing:-.01em !important;text-transform:none !important;color:var(--ink) !important;word-break:keep-all}
+h1.course-title .course-title-ko{display:block;font-family:"Noto Serif KR","STIX Two Text",serif;font-weight:400;font-size:.5em;line-height:1.3;letter-spacing:0;color:var(--muted);margin:.3em 0 0}
+.intro h1.course-title{margin:.6rem 0 1rem}
+</style>
+</head>
+<body>
+<!-- lang-link:body -->
+<a id="langBtn" href="index.html" hreflang="en" lang="en" aria-label="View in English" title="View in English">EN</a>
+<script>document.getElementById("langBtn").addEventListener("click",function(){try{localStorage.setItem("lshlj82-demo-lang","en")}catch(e){}});</script>
+<!-- lang-link:body-end -->
+<button id="themeBtn" class="theme-btn" type="button" aria-label="Switch to light mode"></button>
+<header class="top">
+  <div class="top-inner">
+    <div class="picker">
+      <label for="graphSel">네트워크</label>
+      <select id="graphSel"></select>
+      <button id="newRandom" hidden>새 무작위 그래프</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="intro">
+    <h1 class="course-title">네트워크 위의 확산<span class="course-title-ko" lang="en">Diffusion on networks</span></h1>
+    <p>어떤 양이 네트워크의 노드 위에 있고 링크를 따라 움직입니다. 아래 세 부분 모두 같은 네트워크를 쓰며, 위에서 다른 네트워크를 고르면 모두 다시 만들어집니다. 각 노드를 둘러싼 원은 그 노드가 가진 양을 나타냅니다: 양수는 빨강, 음수는 파랑입니다.</p>
+  </div>
+
+  <!-- ===== 1 ===== -->
+  <section id="s1">
+    <h2><span class="num">1</span> 인접 행렬로 퍼뜨리기</h2>
+    <p><b class="v">A</b>를 곱하면 각 노드가 가진 양 전체가 한꺼번에 모든 이웃에게 보내집니다: <span class="m">v</span><sub>n+1</sub> = <b class="v">A</b><span class="m">v</span><sub>n</sub>이므로 <b class="v">A</b><sup>n</sup>은 <span class="m">n</span>단계 퍼짐입니다. 전체 양이 커지는 것을 막는 것은 아무것도 없습니다.</p>
+    <div class="split">
+      <div class="graphbox">
+        <svg id="g1" viewBox="0 0 400 280" role="img" aria-label="인접 행렬 퍼짐의 네트워크"></svg>
+        <p class="hint">노드를 클릭하면 모든 양을 그 노드에 두고 시작합니다.</p>
+      </div>
+      <div>
+        <div class="eq" id="eq1"></div>
+        <div class="controls">
+          <button class="primary" id="step1">A를 한 번 곱하기</button>
+          <button id="reset1">초기화</button>
+          <label><input type="checkbox" id="norm1"> <span>합이 1이 되도록 다시 맞추기</span></label>
+        </div>
+        <div class="readout" id="read1"></div>
+        <p class="note" id="note1"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 2 ===== -->
+  <section id="s2">
+    <h2><span class="num">2</span> 라플라시안 행렬로 확산하기</h2>
+    <p><b class="v">L</b> = <b class="v">D</b> − <b class="v">A</b>(대각선에 연결선수)로 두면, 각 노드는 연결선수에 비례해 잃고 이웃에게서 얻습니다. 확산은 시간에 따라 연속적으로 일어납니다: d<span class="m">v</span>/d<span class="m">t</span> = −<span class="m">c</span><b class="v">L</b><span class="m">v</span>이며, <span class="m">c</span>가 빠르기를 정합니다.</p>
+    <div class="split">
+      <div class="sticky-col">
+        <div class="graphbox">
+          <svg id="g2" viewBox="0 0 400 280" role="img" aria-label="라플라시안 확산의 네트워크"></svg>
+          <p class="hint">노드를 클릭하면 그 노드에 한 단위를 더 놓고, 그 노드의 방정식을 강조합니다.</p>
+        </div>
+      </div>
+      <div>
+        <div class="controls">
+          <label><span>처음 상태</span>
+            <select id="ic">
+              <option value="one"><span>한 노드에 모두</span></option>
+              <option value="uniform"><span>모든 노드에 같은 양</span></option>
+              <option value="random"><span>무작위 양</span></option>
+              <option value="ripple"><span>균일 상태 + 가장 느린 물결</span></option>
+              <option value="custom"><span>직접 입력한 값</span></option>
+            </select>
+          </label>
+          <label id="icNodeWrap"><span>노드</span> <select id="icNode"></select></label>
+          <button id="reroll" hidden>새 무작위 값</button>
+        </div>
+        <div class="custom" id="customBox" hidden></div>
+        <div class="controls">
+          <button class="primary" id="play2">Play</button>
+          <button id="reset2">다시 시작</button>
+          <label><span>빠르기 <span class="m">c</span></span> <input type="range" id="rate2" min="0.1" max="3" step="0.1" value="1"><span id="rateVal">1.0</span></label>
+        </div>
+        <div class="controls">
+          <span><span class="muted" style="font-size:.95rem">부호</span></span>
+          <div class="seg" role="group" aria-label="부호 규약">
+            <button id="signNeg" aria-pressed="true">d<span class="m">v</span>/d<span class="m">t</span> = −<b>L</b><span class="m">v</span></button>
+            <button id="signPos" aria-pressed="false">d<span class="m">v</span>/d<span class="m">t</span> = +<b>L</b><span class="m">v</span></button>
+          </div>
+        </div>
+        <div class="readout" id="read2"></div>
+
+        <h3>모든 노드의 방정식</h3>
+        <p class="small muted" id="sysCap"></p>
+        <div class="sysbox"><div class="sys"><div class="brace"></div><table class="eqs" id="eqs"></table></div></div>
+        <div class="boxkey" id="boxkey"></div>
+        <div class="eq" id="eq2"></div>
+        <p class="note" id="note2"></p>
+      </div>
+    </div>
+    <div style="margin-top:1.2rem">
+      <canvas id="plot2" aria-label="시간에 따른 각 노드의 양"></canvas>
+      <div class="legend" id="legend2"></div>
+    </div>
+  </section>
+
+  <!-- ===== 3 ===== -->
+  <section id="s3">
+    <h2><span class="num">3</span> 고유 모드: 상태를 만들고 가라앉는 모습 보기</h2>
+    <p>모든 상태는 <b class="v">L</b>의 고유 벡터(<b class="v">L</b><span class="m">x</span><sub>i</sub> = λ<sub>i</sub><span class="m">x</span><sub>i</sub>)의 섞임으로 쓸 수 있습니다. 확산이 일어나면 각 성분은 저마다의 시계에 맞춰 사라집니다: <span class="m">v</span>(<span class="m">t</span>) = Σ<sub>i</sub> <span class="m">c</span><sub>i</sub> e<sup>−λ<sub>i</sub><span class="m">t</span></sup> <span class="m">x</span><sub>i</sub>. 슬라이더로 처음 상태를 직접 섞은 다음, 시간을 끌거나 재생해 보세요. 여기서는 <span class="m">c</span> = 1이고 부호는 −<b>L</b>입니다.</p>
+    <div class="split">
+      <div class="sticky-col">
+        <div class="graphbox">
+          <svg id="g3" viewBox="0 0 400 280" role="img" aria-label="고유 모드로 만든 상태"></svg>
+          <p class="hint" id="cap3"></p>
+        </div>
+        <div class="controls">
+          <button class="primary" id="play3">Play</button>
+          <label style="flex:1"><span>시간</span> <input type="range" id="t3" min="0" max="1" step="0.001" value="0" style="flex:1;min-width:120px"><output id="t3v">0.00</output></label>
+        </div>
+        <div class="formula" id="formula"></div>
+        <canvas id="plot3" aria-label="시간에 따른 각 모드의 양"></canvas>
+        <p class="hint">각 곡선은 <span class="m">c</span><sub>i</sub>e<sup>−λ<sub>i</sub><span class="m">t</span></sup>이고, 세로선은 현재 시간입니다.</p>
+      </div>
+      <div>
+        <div class="controls">
+          <button id="fromS2">2부의 처음 상태 쓰기</button>
+          <button id="mixRandom">무작위 섞기</button>
+          <button id="onlySteady">정상 상태만</button>
+        </div>
+        <div class="modes" id="modes"></div>
+        <p class="note" id="note3" style="margin-top:.9rem"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p><b>부호 규약에 대하여.</b> 슬라이드는 d<span class="m">v</span>/d<span class="m">t</span> = <b>L</b><span class="m">v</span>로 씁니다. <b>L</b>의 고윳값은 음수가 아니므로, 이렇게 쓰면 균일하지 않은 모든 패턴이 지수적으로 커지는데, 이것이 슬라이드의 일반해에서 λ &gt; 0인 “커지는 해”의 경우입니다. 양이 높은 곳에서 낮은 곳으로 흐르는 물리적 확산은 d<span class="m">v</span>/d<span class="m">t</span> = −<b>L</b><span class="m">v</span>입니다. 둘 다 전체 양을 보존하고, 둘 다 <span class="m">v</span><sub>st</sub>를 정상 상태로 가집니다. 2부의 부호 스위치로 둘을 비교해 보세요.</p>
+  <p><b>만든 이.</b> Anthropic의 AI 모델인 Claude Opus 5.5가 만들었습니다. 내용은 인접 행렬, 라플라시안 행렬, 퍼짐 동역학에 관한 이상훈 교수의 강의 슬라이드를 따릅니다.</p>
+</footer>
+
+<script>
+(function(){
+const SVGNS="http://www.w3.org/2000/svg";
+const SERIES=["#E5675A","#2F6FB5","#2E9E6B","#C88A12","#8A4FD6","#D0488F","#1F9AAE","#7C8B2E","#9A6A44","#5A6DD8"];
+const MODEC=["#7A8394","#8A4FD6","#2E9E6B","#C88A12","#1F9AAE","#D0488F","#5A6DD8","#7C8B2E","#9A6A44","#E5675A"];
+const SUB=s=>String(s).replace(/\d/g,d=>"₀₁₂₃₄₅₆₇₈₉"[d]);
+
+/* ---------- graph library ---------- */
+function circlePos(n,cx,cy,r,rot){const p=[];for(let i=0;i<n;i++){const a=(rot==null?-Math.PI/2:rot)+2*Math.PI*i/n;p.push([cx+r*Math.cos(a),cy+r*Math.sin(a)])}return p}
+function makeRandom(){
+  const n=9,pos=circlePos(n,200,140,105).map(([x,y])=>[x+(Math.random()-.5)*30,y+(Math.random()-.5)*24]);
+  let edges=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.random()<0.3)edges.push([i,j]);
+  const par=[...Array(n).keys()],f=x=>par[x]===x?x:(par[x]=f(par[x]));
+  edges.forEach(([a,b])=>par[f(a)]=f(b));
+  for(let i=1;i<n;i++)if(f(i)!==f(0)){const j=Math.floor(Math.random()*i);edges.push([j,i]);par[f(i)]=f(0)}
+  return {name:"무작위 (노드 9개)",pos,edges,start:0};
+}
+const GRAPHS={
+  tri:{name:"슬라이드 예: 노드 3개",pos:[[90,95],[310,50],[200,225]],edges:[[0,2],[1,2]],start:2},
+  four:{name:"슬라이드 예: 노드 4개",pos:[[85,70],[315,70],[135,220],[265,220]],edges:[[0,2],[0,3],[1,2],[1,3],[2,3]],start:2},
+  path:{name:"노드 6개짜리 경로",pos:[[40,160],[104,115],[168,160],[232,115],[296,160],[360,115]],edges:[[0,1],[1,2],[2,3],[3,4],[4,5]],start:0},
+  star:{name:"잎이 6개인 별",pos:[[200,140]].concat(circlePos(6,200,140,105)),edges:[[0,1],[0,2],[0,3],[0,4],[0,5],[0,6]],start:1},
+  cycle:{name:"노드 8개짜리 고리",pos:circlePos(8,200,140,108),edges:[...Array(8).keys()].map(i=>[i,(i+1)%8]),start:0},
+  barbell:{name:"링크 하나로 이어진 두 덩어리",pos:[[50,80],[150,80],[50,200],[150,200],[250,80],[350,80],[250,200],[350,200]],
+    edges:[[0,1],[0,2],[0,3],[1,2],[1,3],[2,3],[4,5],[4,6],[4,7],[5,6],[5,7],[6,7],[1,4]],start:2},
+  split:{name:"떨어진 삼각형 두 개",pos:[[60,200],[120,80],[180,200],[220,80],[280,200],[340,80]],edges:[[0,1],[1,2],[0,2],[3,4],[4,5],[3,5]],start:1},
+  random:makeRandom()
+};
+
+/* ---------- linear algebra ---------- */
+function eigSym(M){
+  const n=M.length,a=M.map(r=>r.slice()),V=M.map((r,i)=>r.map((_,j)=>i===j?1:0));
+  for(let sweep=0;sweep<100;sweep++){
+    let off=0;for(let p=0;p<n;p++)for(let q=p+1;q<n;q++)off+=a[p][q]*a[p][q];
+    if(off<1e-22)break;
+    for(let p=0;p<n;p++)for(let q=p+1;q<n;q++){
+      if(Math.abs(a[p][q])<1e-15)continue;
+      const th=(a[q][q]-a[p][p])/(2*a[p][q]);
+      const t=(th>=0?1:-1)/(Math.abs(th)+Math.sqrt(th*th+1));
+      const c=1/Math.sqrt(t*t+1),s=t*c;
+      for(let k=0;k<n;k++){const x=a[k][p],y=a[k][q];a[k][p]=c*x-s*y;a[k][q]=s*x+c*y}
+      for(let k=0;k<n;k++){const x=a[p][k],y=a[q][k];a[p][k]=c*x-s*y;a[q][k]=s*x+c*y}
+      for(let k=0;k<n;k++){const x=V[k][p],y=V[k][q];V[k][p]=c*x-s*y;V[k][q]=s*x+c*y}
+    }
+  }
+  const out=[...Array(n).keys()].map(i=>{
+    let val=a[i][i];if(Math.abs(val)<1e-9)val=0;
+    let vec=V.map(r=>r[i]),big=0;
+    vec.forEach((x,k)=>{if(Math.abs(x)>Math.abs(vec[big])+1e-9)big=k});
+    if(vec[big]<0)vec=vec.map(x=>-x);
+    return {val,vec};
+  });
+  out.sort((x,y)=>x.val-y.val);
+  return out;
+}
+const matvec=(M,v)=>M.map(r=>r.reduce((s,x,j)=>s+x*v[j],0));
+const sum=v=>v.reduce((a,b)=>a+b,0);
+const dot=(a,b)=>a.reduce((s,x,i)=>s+x*b[i],0);
+const maxAbs=v=>Math.max(...v.map(Math.abs));
+function fmt(x,d){
+  if(!isFinite(x))return x>0?"∞":"−∞";
+  if(Math.abs(x-Math.round(x))<1e-9&&Math.abs(x)<1e7)return String(Math.round(x)).replace("-","−");
+  const dd=d==null?3:d;let s=Math.abs(x)>=1e5?x.toExponential(2):x.toFixed(dd);
+  if(Number(s)===0)s=(0).toFixed(dd);
+  return s.replace("-","−");
+}
+
+/* ---------- state ---------- */
+let G,n,A,deg,L,EIG,zeroCount,lam2;
+const S1={v:[],step:0,hist:[]};
+const S2={v0:[],v:[],t:0,playing:false,sign:-1,rate:1,sel:0,hist:[],stopped:false,scale:1,node:0,custom:null};
+const S3={c:[],on:[],t:0,T:5,playing:false,scale:1};
+let refs1,refs2,refs3;
+const $=id=>document.getElementById(id);
+
+const sel=$("graphSel");
+Object.entries(GRAPHS).forEach(([k,g])=>{const o=document.createElement("option");o.value=k;o.textContent=g.name;sel.appendChild(o)});
+
+function loadGraph(key){
+  G=GRAPHS[key];n=G.pos.length;
+  A=[...Array(n)].map(()=>Array(n).fill(0));
+  G.edges.forEach(([i,j])=>{A[i][j]=1;A[j][i]=1});
+  deg=A.map(r=>sum(r));
+  L=A.map((r,i)=>r.map((x,j)=>i===j?deg[i]:-x));
+  EIG=eigSym(L);
+  zeroCount=EIG.filter(e=>e.val===0).length;
+  lam2=(EIG.find(e=>e.val>0)||{val:1}).val;
+  $("newRandom").hidden=key!=="random";
+  refs1=buildSVG($("g1"),i=>{S1.v=unit(i);S1.step=0;S1.hist=[1];render1()});
+  refs2=buildSVG($("g2"),i=>{S2.v[i]+=1;S2.sel=i;S2.scale=Math.max(S2.scale,maxAbs(S2.v));S2.stopped=false;render2()});
+  refs3=buildSVG($("g3"),null);
+  $("icNode").innerHTML=[...Array(n).keys()].map(i=>'<option value="'+i+'">'+(i+1)+'</option>').join("");
+  S2.node=G.start;$("icNode").value=G.start;S2.custom=null;
+  reset1();applyIC();buildModes();setMix("fromS2");
+}
+function unit(i){const v=Array(n).fill(0);v[i]=1;return v}
+
+/* ---------- SVG ---------- */
+function buildSVG(svg,onClick,thumb){
+  svg.innerHTML="";
+  // clickable diagrams expose their node buttons, so the container is a group rather than a single image
+  if(onClick)svg.setAttribute("role","group");
+  const gH=document.createElementNS(SVGNS,"g"),gE=document.createElementNS(SVGNS,"g"),gN=document.createElementNS(SVGNS,"g");
+  svg.append(gH,gE,gN);
+  G.edges.forEach(([i,j])=>{const l=document.createElementNS(SVGNS,"line");
+    l.setAttribute("x1",G.pos[i][0]);l.setAttribute("y1",G.pos[i][1]);l.setAttribute("x2",G.pos[j][0]);l.setAttribute("y2",G.pos[j][1]);
+    l.setAttribute("class","edge");gE.appendChild(l)});
+  const halos=[],cores=[],vals=[];
+  G.pos.forEach(([x,y],i)=>{
+    const h=document.createElementNS(SVGNS,"circle");h.setAttribute("cx",x);h.setAttribute("cy",y);h.setAttribute("r",14);h.setAttribute("class","halo");gH.appendChild(h);halos.push(h);
+    const g=document.createElementNS(SVGNS,"g");g.setAttribute("class","nodeg");
+    if(onClick){g.setAttribute("tabindex","0");g.setAttribute("role","button");g.setAttribute("aria-label","노드 "+(i+1));
+      g.addEventListener("click",()=>onClick(i));
+      g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onClick(i)}});}
+    else g.style.cursor="default";
+    const c=document.createElementNS(SVGNS,"circle");c.setAttribute("cx",x);c.setAttribute("cy",y);c.setAttribute("r",thumb?16:13);c.setAttribute("class","core");
+    g.appendChild(c);cores.push(c);
+    if(!thumb){
+      const t=document.createElementNS(SVGNS,"text");t.setAttribute("x",x);t.setAttribute("y",y);t.setAttribute("class","nlabel");t.textContent=i+1;g.appendChild(t);
+      const vt=document.createElementNS(SVGNS,"text");vt.setAttribute("x",x);vt.setAttribute("y",y>140?y+36:y-26);vt.setAttribute("class","nval");
+      gN.appendChild(g);gN.appendChild(vt);vals.push(vt);
+    }else gN.appendChild(g);
+  });
+  return {svg,halos,cores,vals};
+}
+const haloR=f=>Math.min(72,14+38*Math.sqrt(Math.max(0,f)));
+function paint(refs,v,scale,digits){
+  v.forEach((x,i)=>{const h=refs.halos[i];h.setAttribute("r",haloR(Math.abs(x)/scale));h.classList.toggle("neg",x<-1e-12);
+    if(refs.vals[i])refs.vals[i].textContent=fmt(x,digits==null?3:digits)});
+}
+
+/* ---------- matrices ---------- */
+function matHTML(M,opts={}){
+  let h='<table class="mat">';
+  M.forEach((row,i)=>{h+='<tr'+(opts.hlRow===i?' class="hl"':'')+'>';
+    row.forEach((x,j)=>{let c=x===0?"z":"";if(opts.lap&&x!==0)c=i===j?"diag":"off";h+='<td class="'+c+'">'+fmt(x,opts.d)+'</td>'});h+='</tr>'});
+  return h+'</table>';
+}
+const colHTML=(v,d,hl)=>matHTML(v.map(x=>[x]),{d,hlRow:hl});
+
+/* ---------- section 1 ---------- */
+function reset1(){S1.v=unit(G.start);S1.step=0;S1.hist=[1];render1()}
+$("reset1").onclick=reset1;
+$("step1").onclick=()=>{
+  let w=matvec(A,S1.v);
+  if($("norm1").checked){const s=sum(w);if(s>0)w=w.map(x=>x/s)}
+  S1.v=w;S1.step++;S1.hist.push(sum(w));render1();
+};
+$("norm1").onchange=()=>{if($("norm1").checked){const s=sum(S1.v);if(s>0)S1.v=S1.v.map(x=>x/s)}S1.hist=[sum(S1.v)];render1()};
+function isBipartite(){
+  const col=Array(n).fill(-1);
+  for(let s=0;s<n;s++){if(col[s]>=0)continue;col[s]=0;const q=[s];
+    while(q.length){const u=q.shift();for(let w=0;w<n;w++)if(A[u][w]){if(col[w]<0){col[w]=1-col[u];q.push(w)}else if(col[w]===col[u])return false}}}
+  return true;
+}
+function render1(){
+  const v=S1.v,next=matvec(A,v),d=$("norm1").checked?3:0;
+  paint(refs1,v,Math.max(maxAbs(v),1e-12));
+  $("eq1").innerHTML='<span class="sym"><b>A</b> =</span>'+matHTML(A)+
+    '<span class="sym">&nbsp; <span class="m">v</span><sub>'+S1.step+'</sub> =</span>'+colHTML(v,d)+
+    '<span class="sym">&nbsp; <b>A</b><span class="m">v</span><sub>'+S1.step+'</sub> =</span>'+colHTML(next,d);
+  const h=S1.hist,ratio=h.length>1&&h[h.length-2]>0?h[h.length-1]/h[h.length-2]:null;
+  $("read1").innerHTML='<span>단계 <b>'+S1.step+'</b></span><span>네트워크 위의 전체 양 <b>'+fmt(sum(v),3)+'</b></span>'+
+    (ratio!=null&&!$("norm1").checked?'<span>이번 단계에 ×<b>'+fmt(ratio,2)+'</b>배로 커짐</span>':'');
+  const bip=isBipartite();let msg;
+  if($("norm1").checked){
+    msg=bip?"다시 맞추고 나면, 이처럼 이분 네트워크는 가라앉지 않고 두 쪽 사이를 번갈아 오갑니다. 이 패턴은 두 단계마다 되풀이됩니다."
+           :"다시 맞추고 나면, 곱하기를 되풀이할수록 A의 으뜸 고유 벡터로 가라앉습니다. 고유 벡터 중심도가 바탕으로 삼는 패턴입니다.";
+  }else{
+    msg="각 노드가 가진 양 전체를 모든 이웃에게 건네므로, 링크가 k개인 노드는 가진 양을 k배로 늘립니다. 슬라이드에서 이 퍼짐을 규격화되지 않았다고 부르는 이유입니다: 양이 보존되지 않습니다.";
+    if(bip)msg+=" 이 네트워크는 이분 네트워크이므로, 양이 두 쪽 사이를 이리저리 출렁이기도 합니다.";
+  }
+  $("note1").textContent=msg;
+}
+
+/* ---------- section 2: initial conditions ---------- */
+function makeIC(kind){
+  if(kind==="one")return unit(S2.node);
+  if(kind==="uniform")return Array(n).fill(1);
+  if(kind==="random")return [...Array(n)].map(()=>Math.round(Math.random()*100)/100);
+  if(kind==="ripple"){const x=(EIG.find(e=>e.val>0)||EIG[0]).vec;const m=maxAbs(x);return x.map(y=>Math.round((1+0.9*y/m)*1000)/1000)}
+  if(kind==="custom"){if(!S2.custom||S2.custom.length!==n)S2.custom=S2.v0.length===n?S2.v0.map(x=>Math.round(x*1000)/1000):unit(S2.node);return S2.custom.slice()}
+}
+function applyIC(keepRandom){
+  const kind=$("ic").value;
+  $("icNodeWrap").hidden=kind!=="one";$("reroll").hidden=kind!=="random";
+  if(!(keepRandom&&kind==="random"&&S2.v0.length===n))S2.v0=makeIC(kind);
+  $("customBox").hidden=kind!=="custom";
+  if(kind==="custom")buildCustom();
+  if(kind==="one")S2.sel=S2.node;
+  restart2();
+}
+function buildCustom(){
+  const box=$("customBox");
+  box.innerHTML=S2.custom.map((x,i)=>'<label>node '+(i+1)+' <input type="number" step="0.1" value="'+x+'" data-i="'+i+'"></label>').join("");
+  box.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",()=>{
+    const val=parseFloat(inp.value);S2.custom[+inp.dataset.i]=isFinite(val)?val:0;S2.v0=S2.custom.slice();restart2();
+  }));
+}
+$("ic").onchange=()=>applyIC();
+$("icNode").onchange=()=>{S2.node=+$("icNode").value;applyIC()};
+$("reroll").onclick=()=>applyIC();
+
+/* ---------- section 2: simulation ---------- */
+function restart2(){
+  S2.v=S2.v0.slice();S2.t=0;S2.hist=[[0,...S2.v]];S2.stopped=false;
+  S2.scale=Math.max(maxAbs(S2.v),sum(S2.v.map(Math.abs))/2,1e-9);
+  if(S2.sel>=n)S2.sel=0;
+  setPlaying(false);buildLegend2();render2();
+}
+$("reset2").onclick=()=>applyIC(true);
+function setPlaying(p){S2.playing=p;$("play2").textContent=p?"일시 정지":"재생";$("g2").classList.toggle("anim",p);last2=null}
+$("play2").onclick=()=>{if(S2.stopped)restart2();setPlaying(!S2.playing)};
+$("rate2").oninput=e=>{S2.rate=+e.target.value;$("rateVal").textContent=S2.rate.toFixed(1);render2()};
+function setSign(s){S2.sign=s;$("signNeg").setAttribute("aria-pressed",s<0);$("signPos").setAttribute("aria-pressed",s>0);restart2()}
+$("signNeg").onclick=()=>setSign(-1);$("signPos").onclick=()=>setSign(1);
+
+const deriv=v=>matvec(L,v).map(x=>S2.sign*S2.rate*x);
+function rk4(v,h){
+  const k1=deriv(v),k2=deriv(v.map((x,i)=>x+h/2*k1[i])),k3=deriv(v.map((x,i)=>x+h/2*k2[i])),k4=deriv(v.map((x,i)=>x+h*k3[i]));
+  return v.map((x,i)=>x+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+}
+const spread=v=>{if(zeroCount!==1)return 1;const m=sum(v)/n;return maxAbs(v.map(x=>x-m))};
+function advance(dt){
+  let T=dt;while(T>1e-9){const s=Math.min(0.005,T);S2.v=rk4(S2.v,s);S2.t+=s;T-=s}
+  S2.hist.push([S2.t,...S2.v]);
+  if(S2.hist.length>2400)S2.hist=S2.hist.filter((_,i)=>i%2===0||i===S2.hist.length-1);
+  if(maxAbs(S2.v)>500*Math.max(1,S2.scale)){S2.stopped=true;setPlaying(false)}
+  if(S2.sign<0&&spread(S2.v)<1e-5)setPlaying(false);
+}
+
+function sysRows(){
+  let h="";
+  for(let i=0;i<n;i++){
+    const nb=[];for(let j=0;j<n;j++)if(A[i][j])nb.push(j);
+    const vi='<span class="m">v</span><sub>'+(i+1)+'</sub>',k=deg[i];
+    const kv=(k===1?"":k)+vi;
+    const nbTxt=sgn=>nb.length?nb.map((j,idx)=>(idx||sgn==="−"?sgn+" ":"")+'<span class="m">v</span><sub>'+(j+1)+'</sub>').join(" "):"0";
+    let self,nbT;
+    if(k===0){self='0';nbT='0'}
+    else if(S2.sign<0){self='−'+kv;nbT=nbTxt("+").replace(/^(?!\+)/,"+ ")}
+    else{self=kv;nbT=nbTxt("−")}
+    const rhs=(S2.sign<0?matvec(L,S2.v)[i]*-1:matvec(L,S2.v)[i])*S2.rate;
+    h+='<tr data-i="'+i+'"'+(i===S2.sel?' class="hl"':'')+'><td class="lhs">d'+vi+'/d<span class="m">t</span></td><td>=</td>'+
+       '<td><span class="box b">'+self+'</span></td><td><span class="box r">'+nbT+'</span></td>'+
+       '<td class="val">= '+fmt(rhs,3)+'</td></tr>';
+  }
+  return h;
+}
+$("eqs").addEventListener("click",e=>{const tr=e.target.closest("tr");if(tr){S2.sel=+tr.dataset.i;render2()}});
+
+function render2(){
+  const v=S2.v;
+  paint(refs2,v,S2.scale);
+  v.forEach((_,i)=>{refs2.cores[i].style.stroke=SERIES[i%SERIES.length];refs2.cores[i].style.strokeWidth=i===S2.sel?"5":"3"});
+  $("sysCap").innerHTML=(S2.rate===1?"":"오른쪽 변에는 모두 <span class=\"m\">c</span> = "+S2.rate.toFixed(1)+"가 곱해집니다. ")+
+    "오른쪽 숫자는 현재의 변화율입니다. 행을 클릭하면 아래 <b>L</b>에서 그 노드를 강조합니다.";
+  $("eqs").innerHTML=sysRows();
+  $("boxkey").innerHTML=S2.sign<0
+    ?'<span class="b"><i></i>연결선수에 비례하는 유출</span><span class="r"><i></i>링크를 따라 이웃에게서 오는 유입</span>'
+    :'<span class="b"><i></i>연결선수에 비례하는 “자기 복제”</span><span class="r"><i></i>링크를 통한 다른 노드로의 “누출”</span>';
+  const m=sum(v);
+  $("read2").innerHTML='<span>시간 <span class="m">t</span> = <b>'+S2.t.toFixed(2)+'</b></span><span>전체 <b>'+fmt(m,3)+'</b></span>'+
+    (zeroCount===1?'<span>정상 상태: 모든 노드가 <b>'+fmt(m/n,3)+'</b></span>':'');
+  $("eq2").innerHTML='<span class="sym"><b>L</b> =</span>'+matHTML(L,{lap:true,hlRow:S2.sel})+'<span class="sym">&nbsp;<span class="m">v</span>(<span class="m">t</span>) =</span>'+colHTML(v,3,S2.sel);
+  let note;
+  if(S2.stopped)note='<span class="warn">멈춤: 값이 500배 넘게 커졌습니다.</span> +L에서도 균일 상태는 여전히 정상 상태이지만, 노드 사이의 차이는 e<sup>λt</sup>의 비율로 증폭됩니다. 전체 양이 그대로인 것은 큰 양수와 음수 값이 서로 상쇄되기 때문일 뿐입니다. 재생을 누르면 처음부터 다시 시작합니다.';
+  else if(S2.sign>0)note="슬라이드에 쓰인 대로의 부호입니다. 전체 양을 보세요: 개별 노드는 큰 양수와 음수 값으로 달아나지만 전체는 일정합니다. 완벽하게 균일한 처음 상태만 그대로 머뭅니다.";
+  else if(zeroCount>1)note="이 네트워크는 "+zeroCount+"개의 조각으로 나뉘어 있습니다. 양은 조각 사이를 건너갈 수 없으므로 조각마다 따로 고르게 되고, 최종 상태가 모든 곳에서 같지는 않습니다.";
+  else note="L의 각 행과 열의 합이 0이므로, 한 노드를 떠난 양은 다른 노드에 도착합니다: 전체 양은 결코 변하지 않습니다. 모든 노드가 같은 양을 가지면 Lv = 0이 되어 확산이 멈춥니다.";
+  $("note2").innerHTML=note;
+  drawPlot2();
+}
+
+/* ---------- plots ---------- */
+function prepCanvas(cv){
+  const ctx=cv.getContext("2d"),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr)}
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement);
+  return {ctx,W,H,ink:cs.getPropertyValue("--muted").trim(),line:cs.getPropertyValue("--line").trim(),fg:cs.getPropertyValue("--ink").trim()};
+}
+function axes(P,tmax,ymin,ymax){
+  const {ctx,W,H,ink,line}=P,pl=46,pr=14,pt=14,pb=28,w=W-pl-pr,h=H-pt-pb;
+  const X=t=>pl+w*t/tmax,Y=y=>pt+h*(1-(y-ymin)/(ymax-ymin));
+  ctx.font='12px "IBM Plex Sans KR",Georgia,serif';ctx.fillStyle=ink;ctx.strokeStyle=line;ctx.lineWidth=1;
+  for(let k=0;k<=4;k++){const y=ymin+(ymax-ymin)*k/4,yy=Y(y);ctx.beginPath();ctx.moveTo(pl,yy);ctx.lineTo(pl+w,yy);ctx.stroke();ctx.textAlign="right";ctx.fillText(fmt(y,2),pl-6,yy+4)}
+  ctx.textAlign="center";for(let k=0;k<=5;k++){const t=tmax*k/5;ctx.fillText(t.toFixed(1),X(t),H-8)}
+  return {X,Y,pl,pt,w,h};
+}
+function buildLegend2(){$("legend2").innerHTML=[...Array(n).keys()].map(i=>'<span><i style="background:'+SERIES[i%SERIES.length]+'"></i>노드 '+(i+1)+'</span>').join("")+
+  (zeroCount===1?'<span><i style="background:none;border-top:2px dashed currentColor;height:0"></i>정상 상태</span>':'')}
+function drawPlot2(){
+  const P=prepCanvas($("plot2")),hist=S2.hist,tmax=Math.max(3/S2.rate,S2.t);
+  let ymin=0,ymax=0.5;hist.forEach(r=>{for(let k=1;k<r.length;k++){if(r[k]<ymin)ymin=r[k];if(r[k]>ymax)ymax=r[k]}});
+  const pad=(ymax-ymin)*.06;ymax+=pad;if(ymin<0)ymin-=pad;
+  const {X,Y}=axes(P,tmax,ymin,ymax),ctx=P.ctx;
+  if(zeroCount===1){const ss=sum(S2.v)/n;ctx.setLineDash([5,4]);ctx.strokeStyle=P.ink;ctx.beginPath();ctx.moveTo(X(0),Y(ss));ctx.lineTo(X(tmax),Y(ss));ctx.stroke();ctx.setLineDash([])}
+  ctx.lineWidth=2.2;
+  for(let i=0;i<n;i++){ctx.strokeStyle=SERIES[i%SERIES.length];ctx.beginPath();
+    hist.forEach((r,k)=>{const x=X(r[0]),y=Y(r[i+1]);k?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()}
+}
+
+/* ---------- section 3: eigenmodes ---------- */
+let modeRefs=[];
+function buildModes(){
+  S3.T=Math.min(30,Math.max(3,5/lam2));
+  $("t3").max=S3.T;$("t3").step=S3.T/600;
+  const box=$("modes");box.innerHTML="";modeRefs=[];
+  EIG.forEach((e,i)=>{
+    const col=MODEC[i%MODEC.length];
+    const row=document.createElement("div");row.className="mode-row";row.style.setProperty("--mc",col);
+    const life=e.val===0?"사라지지 않음":"사라짐: e<sup>−"+(Math.abs(e.val-1)<1e-9?"":fmt(e.val,2))+"<span class=\"m\">t</span></sup>";
+    row.innerHTML='<input type="checkbox" checked aria-label="포함할 모드 '+(i+1)+'">'+
+      '<svg class="thumb" viewBox="0 0 400 280" aria-hidden="true"></svg>'+
+      '<div><div class="mode-top"><span>λ<sub>'+(i+1)+'</sub> = '+fmt(e.val,3)+', '+life+'</span><span class="now"></span></div>'+
+      '<div class="mode-ctl"><span><span class="m">c</span><sub>'+(i+1)+'</sub></span><input type="range" min="-1.5" max="1.5" step="0.01" aria-label="모드의 처음 양 '+(i+1)+'"><output></output></div>'+
+      '<div class="bar"><i></i></div></div>';
+    box.appendChild(row);
+    const svg=row.querySelector("svg"),tr=buildSVG(svg,null,true);
+    const mx=maxAbs(e.vec);
+    e.vec.forEach((x,k)=>{tr.halos[k].setAttribute("r",Math.abs(x)<1e-9?0:haloR(Math.abs(x)/mx*0.9));tr.halos[k].classList.toggle("neg",x<0)});
+    const chk=row.querySelector("input[type=checkbox]"),sl=row.querySelector("input[type=range]");
+    chk.onchange=()=>{S3.on[i]=chk.checked;row.classList.toggle("off",!chk.checked);rescale3();render3()};
+    sl.oninput=()=>{S3.c[i]=+sl.value;rescale3();render3()};
+    modeRefs.push({row,chk,sl,out:row.querySelector("output"),now:row.querySelector(".now"),bar:row.querySelector(".bar i")});
+  });
+}
+function setMix(kind){
+  if(kind==="fromS2")S3.c=EIG.map(e=>dot(e.vec,S2.v0));
+  else if(kind==="random")S3.c=EIG.map((e,i)=>i<zeroCount?0.8:Math.round((Math.random()*2-1)*100)/100);
+  else S3.c=EIG.map((e,i)=>i===0?1:0);
+  // keep the exact coefficients (no clipping); widen a slider when an imported coefficient exceeds ±1.5
+  S3.on=EIG.map(()=>true);
+  modeRefs.forEach((m,i)=>{const r=Math.max(1.5,Math.ceil(Math.abs(S3.c[i])*100)/100);m.sl.min=-r;m.sl.max=r;
+    m.chk.checked=true;m.row.classList.remove("off");m.sl.value=S3.c[i]});
+  setT3(0);rescale3();render3();
+}
+$("fromS2").onclick=()=>setMix("fromS2");$("mixRandom").onclick=()=>setMix("random");$("onlySteady").onclick=()=>setMix("steady");
+function amp(i,t){return S3.on[i]?S3.c[i]*Math.exp(-EIG[i].val*t):0}
+function state3(t){const v=Array(n).fill(0);EIG.forEach((e,i)=>{const a=amp(i,t);if(a)e.vec.forEach((x,k)=>v[k]+=a*x)});return v}
+function rescale3(){S3.scale=Math.max(maxAbs(state3(0)),0.05);S3.cmax=Math.max(...S3.c.map(Math.abs),0.05)}
+function setT3(t){S3.t=t;$("t3").value=t;$("t3v").textContent=t.toFixed(2)}
+$("t3").oninput=e=>{setPlaying3(false);setT3(+e.target.value);render3()};
+function setPlaying3(p){S3.playing=p;$("play3").textContent=p?"일시 정지":"재생";$("g3").classList.toggle("anim",p);last3=null}
+$("play3").onclick=()=>{if(!S3.playing&&S3.t>=S3.T-1e-6)setT3(0);setPlaying3(!S3.playing)};
+
+function render3(){
+  const v=state3(S3.t);
+  paint(refs3,v,S3.scale,2);
+  modeRefs.forEach((m,i)=>{
+    const a=amp(i,S3.t),f=Math.min(1,Math.abs(a)/S3.cmax)*50;
+    m.out.textContent=fmt(S3.c[i],2);
+    m.now.textContent=S3.on[i]?"현재 "+fmt(a,3):"뺌";
+    m.bar.style.width=f+"%";m.bar.style.left=(a>=0?50:50-f)+"%";
+  });
+  // formula
+  const parts=EIG.map((e,i)=>{if(!S3.on[i]||Math.abs(S3.c[i])<0.005)return null;
+    return '<span class="t" style="--mc:'+MODEC[i%MODEC.length]+'">'+fmt(amp(i,S3.t),3)+' <span class="m">x</span><sub>'+(i+1)+'</sub></span>'}).filter(Boolean);
+  $("formula").innerHTML='<span class="m">v</span>('+S3.t.toFixed(2)+') = '+(parts.length?parts.join(" + ").replace(/\+ <span class="t"([^>]*)>−/g,'− <span class="t"$1>'):"0");
+  const tot=sum(v);
+  $("cap3").textContent=zeroCount===1
+    ?"전체 "+fmt(tot,3)+". λ = 0 성분만 전체 양을 실어 나르므로 전체는 결코 변하지 않습니다. 나머지는 모두 합하면 0입니다."
+    :"전체 "+fmt(tot,3)+". 네트워크의 떨어진 조각마다 λ = 0 성분이 하나씩 있으므로, 조각마다 자기 전체 양을 지킵니다.";
+  let note;
+  if(zeroCount===1){
+    note="사라질 수 있는 가장 느린 성분은 λ₂ = "+fmt(lam2,3)+"이므로, 대략 t = "+fmt(1/lam2,1)+" 뒤에는 남은 차이가 거의 그 패턴 하나입니다. 정상 상태를 빼 보세요: 그러면 네트워크의 전체 양이 0이 되어 모든 것이 사라집니다.";
+    if(G===GRAPHS.barbell)note+=" 여기서 λ₂가 작은 것은 다리가 하나뿐이기 때문입니다: 그 패턴은 한 덩어리에서 양수, 다른 덩어리에서 음수이고, 그 불균형은 링크 하나를 통해서만 빠져나갈 수 있습니다.";
+  }else note="고윳값 0이 "+zeroCount+"개 있으므로, 사라지지 않는 성분이 "+zeroCount+"개 있습니다. 그래서 최종 상태는 각 조각에 처음 얼마나 있었는지에 달려 있습니다.";
+  $("note3").textContent=note;
+  drawPlot3();
+}
+function drawPlot3(){
+  const P=prepCanvas($("plot3")),T=S3.T,ym=S3.cmax*1.08;
+  const {X,Y}=axes(P,T,-ym,ym),ctx=P.ctx;
+  ctx.lineWidth=2.2;
+  EIG.forEach((e,i)=>{if(!S3.on[i])return;ctx.strokeStyle=MODEC[i%MODEC.length];ctx.beginPath();
+    for(let k=0;k<=160;k++){const t=T*k/160,x=X(t),y=Y(amp(i,t));k?ctx.lineTo(x,y):ctx.moveTo(x,y)}ctx.stroke()});
+  ctx.strokeStyle=P.fg;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(X(S3.t),Y(ym));ctx.lineTo(X(S3.t),Y(-ym));ctx.stroke();
+}
+
+/* ---------- loop ---------- */
+let last2=null,last3=null;
+function frame(ts){
+  if(S2.playing){if(last2!=null)advance(Math.min(0.05,(ts-last2)/1000));last2=ts;render2()}
+  if(S3.playing){
+    if(last3!=null){const nt=Math.min(S3.T,S3.t+Math.min(0.05,(ts-last3)/1000)*S3.T/6);setT3(nt);if(nt>=S3.T)setPlaying3(false)}
+    last3=ts;render3();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+const ro=new ResizeObserver(()=>{drawPlot2();drawPlot3()});ro.observe($("plot2"));ro.observe($("plot3"));
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>{drawPlot2();drawPlot3()});
+new MutationObserver(()=>{drawPlot2();drawPlot3()}).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+sel.onchange=()=>loadGraph(sel.value);
+$("newRandom").onclick=()=>{GRAPHS.random=makeRandom();loadGraph("random")};
+loadGraph("tri");
+})();
+</script>
+<script>
+(() => {
+  // light/dark switch; the choice is remembered across all of the course demos
+  const btn = document.getElementById("themeBtn"), root = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
+  const SUN = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></svg>';
+  const current = () => root.dataset.theme || (mq.matches ? "dark" : "light");
+  const sync = () => { const dark = current() === "dark", label = dark ? "밝은 화면으로 전환" : "어두운 화면으로 전환";
+    btn.innerHTML = dark ? SUN : MOON; btn.setAttribute("aria-label", label); btn.title = label; };
+  btn.addEventListener("click", () => { const next = current() === "dark" ? "light" : "dark"; root.dataset.theme = next;
+    try { localStorage.setItem("netsci-theme", next); } catch (e) {} sync(); });
+  mq.addEventListener("change", sync);
+  sync();
+})();
+</script>
+</body>
+</html>
